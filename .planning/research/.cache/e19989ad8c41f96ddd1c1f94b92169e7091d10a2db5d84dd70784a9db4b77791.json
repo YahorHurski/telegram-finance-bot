@@ -1,0 +1,1 @@
+{"content":"iOS Transaction automation (Wallet trigger in iOS 26) exposes Transaction, Card or Pass, Merchant, Amount, Name. No transaction ID or timestamp; flaky empty merchant/amount 0, timeouts, fires on declines, no built-in UUID action.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-11-14T21:48:42.809Z","ttl":86400000,"kind":"web"}

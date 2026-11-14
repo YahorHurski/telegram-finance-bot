@@ -60,7 +60,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- После появления CI (Phase 1): дополнить GitHub ruleset "Protect main" правилами required status checks (+ решить про require pull request). Сейчас активны только deletion и non_fast_forward.
 
 ### Blockers/Concerns
 

@@ -73,7 +73,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **BAL-01**: `/balance 3200` задаёт или корректирует текущий баланс
 - [ ] **BAL-02**: Траты автоматически уменьшают баланс
 - [ ] **BAL-03**: Доход вносится сообщением `+5000 зп` и увеличивает баланс
-- [ ] **BAL-04**: Пользователь может посмотреть текущий баланс
+- [ ] **BAL-04**: Пользователь может посмотреть текущий баланс; рядом с ним бот показывает, когда баланс последний раз сверялся командой `/balance N` (например, «сверен 12 дней назад»)
 
 ### Reports
 
@@ -217,4 +217,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-11-14*
-*Last updated: 2026-11-15 after planning review (quick task 261115-68j)*
+*Last updated: 2026-11-15 after adding balance reconciliation date to BAL-04*

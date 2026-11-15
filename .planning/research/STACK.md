@@ -12,10 +12,10 @@
 - **Web:** One ASP.NET Core process with **minimal APIs** (route groups plus endpoint filters, a custom token `AuthenticationHandler`, built-in .NET 10 minimal-API validation). It hosts the Shortcut ingestion endpoint, the Telegram webhook, health checks and the background workers.
 - **Bot:** **Telegram.Bot 22.10.4** on webhook in production and long polling in development, with both transports feeding one `IUpdateHandler`.
 - **Data:** **PostgreSQL 18** + **EF Core 10.0.15** + **Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3** + **NodaTime** (via the Npgsql NodaTime plugin) + **EFCore.NamingConventions** (snake_case). Migrations ship as an **EF migration bundle** run by a one-shot compose service before the app starts.
-- **Scheduling:** A plain **`BackgroundService` + `PeriodicTimer` + `TimeProvider`** "catch-up dispatcher" with DB-tracked "summary sent" markers. **No Quartz or Hangfire in v1.**
+- **Scheduling:** A plain **`BackgroundService` + `PeriodicTimer` + `TimeProvider`** "catch-up" `SummaryScheduler` that enqueues rows into the transactional outbox. The unique outbox `dedupe_key` (e.g. `summary:week:{user}:{monday}`) is the "already sent" marker; there is no separate dispatch table. **No Quartz or Hangfire in v1.**
 - **Charts:** **ScottPlot 5.1.59** (MIT, SkiaSharp 3.119 underneath), with a **bundled Cyrillic TTF (Noto Sans / Inter)** registered through `Fonts.AddFontFile`.
 - **Tests:** **xUnit v3 4.0.3** on Microsoft Testing Platform v2, **Testcontainers.PostgreSql 4.16.0**, **WebApplicationFactory (Microsoft.AspNetCore.Mvc.Testing 10.0.15)**, **Respawn 7**, **NSubstitute**, **AwesomeAssertions** (or plain `Assert`), **NodaTime.Testing / FakeTimeProvider**, **WireMock.Net** as a fake Telegram Bot API.
-- **Deploy:** Docker Compose (app + migrator + postgres + caddy) on a **~€5–6/month Hetzner Cloud VPS**. **Caddy 2.11** does automatic HTTPS. GitHub Actions builds, tests, pushes to GHCR and deploys over SSH.
+- **Deploy:** Docker Compose (app + migrator + postgres + caddy) on an **Oracle Cloud Always Free VM** (Ampere A1, ARM64; account upgraded to Pay As You Go) behind a DuckDNS subdomain. This is a user decision: hosting must be free. A ~€6/month Hetzner VPS is the paid fallback and needs no rework, because everything runs in Docker. **Caddy 2.11** does automatic HTTPS. GitHub Actions builds, tests, pushes to GHCR and deploys over SSH.
 - **Observability:** **Serilog.AspNetCore 10.0.0** (compact JSON to stdout), **OpenTelemetry 1.21** traces and metrics (OTLP, off by default in production), the standalone Aspire Dashboard for local viewing, health checks plus an external uptime pinger.
 
 ---
@@ -27,7 +27,7 @@
 | Technology | Version | Purpose | Why Recommended | Confidence |
 |------------|---------|---------|-----------------|------------|
 | .NET SDK / runtime | **10.0** (runtime 10.0.15, Nov 2026 patch) | Platform | Current **LTS**, released 2025-11-11, supported to 2028-11-14. .NET 11 (STS, 2026-11-10) has the **same** end-of-support date, and its ecosystem is not ready yet (Npgsql EF 11 = 11.0.0-rc.3, Serilog.AspNetCore 11 = dev builds only). Upgrade straight to .NET 12 LTS (Nov 2027) later. C# 14. | HIGH (official support-policy page + NuGet) |
-| ASP.NET Core (minimal APIs) | 10.0.x (shared framework) | HTTP ingestion API, Telegram webhook, health endpoints, hosting for background services | One deployable keeps a €5 VPS simple. In .NET 10, minimal APIs are the first-class default: route groups, endpoint filters, typed results, **built-in validation** (`builder.Services.AddValidation()`), native OpenAPI 3.1. Controllers add ceremony and buy nothing for ~10 endpoints. | HIGH |
+| ASP.NET Core (minimal APIs) | 10.0.x (shared framework) | HTTP ingestion API, Telegram webhook, health endpoints, hosting for background services | One deployable keeps a small VM simple. In .NET 10, minimal APIs are the first-class default: route groups, endpoint filters, typed results, **built-in validation** (`builder.Services.AddValidation()`), native OpenAPI 3.1. Controllers add ceremony and buy nothing for ~10 endpoints. | HIGH |
 | Telegram.Bot | **22.10.4** (published 2026-11-09, Bot API 10.4) | Telegram Bot API client | The de facto .NET Telegram client, actively maintained (several releases per month), now on nuget.org. Since v22.5 it needs **no** `ConfigureTelegramBot*` JSON setup for webhooks, because its types are compatible with ASP.NET Core's default camelCase System.Text.Json. Methods have no `Async` suffix (`SendMessage`, `AnswerCallbackQuery`). | HIGH (NuGet + official book via Context7) |
 | PostgreSQL | **18** (image `postgres:18-alpine`, currently 18.7) | Primary store | Current stable major. **PostgreSQL 19 is still RC2**, so don't use it. Needed features (unique constraints for idempotency, `numeric` money, `date`/`timestamptz`, partial indexes) are all mature. | HIGH (Docker Hub tags) |
 | Entity Framework Core | **10.0.15** (pin; do **not** take 11.0.0) | ORM and migrations | LTS-aligned. EF Core 10 adds **named query filters** (several filters per entity, separately toggleable), which suit `UserId` tenant isolation plus soft-delete. `ExecuteUpdate`/`ExecuteDelete` cover bulk edits. | HIGH |
@@ -154,10 +154,10 @@ dotnet tool install csharpier --version 1.4.0
 The requirements (weekly summary Sunday evening and monthly summary on the 1st, in the user's timezone; 80%/100% alerts) look like a scheduler problem. The robust implementation is a **catch-up dispatcher**:
 
 1. A `BackgroundService` ticks every 1–5 minutes (`PeriodicTimer`, `TimeProvider` injected).
-2. Each tick: for each user, compute "now" in the user's zone (NodaTime, `Europe/Warsaw` default, stored per user). If the weekly summary for ISO week W is due (e.g. local Sunday ≥ 20:00) and `summary_dispatch(user_id, kind, period)` has no row, render, send, and insert the row. A unique constraint makes double-sends impossible.
+2. Each tick: for each user, compute "now" in the user's zone (NodaTime, `Europe/Warsaw` default, stored per user). If the weekly summary for ISO week W is due (e.g. local Sunday ≥ 20:00) and no outbox row with that period's `dedupe_key` exists, enqueue one with `ON CONFLICT DO NOTHING`; the `OutboxDispatcher` renders and sends it. The unique `dedupe_key` makes double-sends impossible (design merged in SUMMARY.md, "Resolved Conflicts" 2).
 3. If the server was down at 20:00, the next tick after restart still sends it (catch-up). In-memory Quartz cron triggers would silently drop that fire.
 
-This needs **zero extra packages**, is easy to test with `FakeTimeProvider` / NodaTime `FakeClock`, handles DST and per-user timezones correctly, and is a stronger portfolio talking point ("idempotent, restart-safe scheduling") than "I added Hangfire". **Threshold alerts (80%/100%) are not scheduled.** They fire inline when a transaction is saved, guarded by a per-user, per-week "alert sent" marker.
+This needs **zero extra packages**, is easy to test with `FakeTimeProvider` / NodaTime `FakeClock`, handles DST and per-user timezones correctly, and is a stronger portfolio talking point ("idempotent, restart-safe scheduling") than "I added Hangfire". **Threshold alerts (80%/100%) are not scheduled.** They are detected inside the transaction that saves the expense and enqueued into the same outbox with the key `alert:{user}:{week}:{threshold}`.
 
 Escalation path: if many heterogeneous jobs appear later (Open Banking polling, retries), move to **Quartz.NET 4.x** (4.7.3) with the ADO.NET Postgres job store. Note that Quartz 4.0 (Sept 2026) was a breaking major: `Quartz.Extensions.Hosting` / `.DependencyInjection` were folded into the main `Quartz` package, and it requires a schema migration. Most blog posts still show the 3.x API.
 
@@ -172,7 +172,7 @@ Escalation path: if many heterogeneous jobs appear later (Open Banking polling, 
 ### 4. Database and migrations
 
 - Money: `decimal` mapped to `numeric(12,2)`. PLN only, but store a `currency char(3)` column defaulted to `PLN` so multi-currency later is not a migration on a hot table.
-- Idempotent ingestion: a unique index on `(user_id, dedup_key)`, where `dedup_key` is a hash of the normalized Shortcut payload (amount, merchant, card, timestamp truncated to a sensible granularity). EF Core 10 has no native upsert, so use `INSERT ... ON CONFLICT DO NOTHING RETURNING id` via `Database.SqlQuery`/`ExecuteSql`, or catch `PostgresException { SqlState: "23505" }`.
+- Idempotent ingestion: two layers. Layer 1 is a client nonce: the Shortcut builds an `Idempotency-Key` once per run and reuses it across its own 2–3 retries, and the server enforces `UNIQUE (user_id, idempotency_key)`. Layer 2 is a soft-duplicate window (same amount, normalized merchant and card within about 120 s), handled visibly and never dropped silently. **Do not** use a hash of the payload with a truncated timestamp as the key: it drops legitimate repeats and misses retries. EF Core 10 has no native upsert, so use `INSERT ... ON CONFLICT DO NOTHING RETURNING id` via `Database.SqlQuery`/`ExecuteSql`, or catch `PostgresException { SqlState: "23505" }`.
 - Tenant isolation: EF Core 10 **named query filter** `"Tenant"` on every user-owned entity (`HasQueryFilter("Tenant", e => e.UserId == _currentUser.Id)`), plus `UserId` in every composite index. Integration tests should prove that user A cannot read user B's data.
 - **Migrations:** generate in dev with `dotnet ef migrations add`. In CI, produce a self-contained **migration bundle** (`dotnet ef migrations bundle --self-contained -r linux-x64` or `linux-arm64`). Ship it in a `migrator` image or stage. In Compose, the `app` service has `depends_on: migrator: condition: service_completed_successfully`. Do **not** call `Database.Migrate()` on app startup in production: it races with multiple replicas, hides failures in app logs, and needs DDL rights for the runtime user. For tests, `Database.MigrateAsync()` against the Testcontainers DB is fine, because it also verifies the migrations.
 
@@ -182,7 +182,7 @@ Escalation path: if many heterogeneous jobs appear later (Open Banking polling, 
   - Use **`-chiseled-extra`, not plain `-chiseled`**. Plain chiseled images run in **invariant globalization mode with no ICU and no tzdata**, which breaks `ru-RU` month and day names and `pl-PL` number formatting in reports. NodaTime covers time zones, but culture formatting still needs ICU.
   - Chiseled images run as non-root and have no shell. That is good for security, but health checks must be HTTP-based (Compose `healthcheck` cannot `curl` inside). Let Caddy and the external uptime monitor hit `/health`, or ship a tiny self-check flag in the app.
   - **Verify** that ScottPlot's native HarfBuzz/Skia libraries load on chiseled-extra with a CI smoke test that renders one chart inside the built image. If it fails, fall back to `aspnet:10.0-noble` (full Ubuntu). This is MEDIUM confidence and has not been verified first-hand.
-- ARM64 VPS (Hetzner CAX): .NET, Npgsql, SkiaSharp NoDependencies native assets and postgres images all support `linux/arm64`. Build on GitHub's free `ubuntu-24.04-arm` runners (public repos) rather than QEMU emulation.
+- ARM64 VM (Oracle Ampere A1, or Hetzner CAX as fallback): .NET, Npgsql, SkiaSharp NoDependencies native assets and postgres images all support `linux/arm64`. Build on GitHub's free `ubuntu-24.04-arm` runners (public repos) rather than QEMU emulation.
 
 ### 6. Deployment topology
 
@@ -197,7 +197,7 @@ Internet ──443──> caddy (auto TLS) ──> app:8080 (ASP.NET Core: /api/
 - **Get a domain** (cheap `.pl`/`.dev`, or a free DDNS subdomain such as DuckDNS). The Shortcut URL and the webhook must stay stable across VPS rebuilds. Let's Encrypt IP-address certificates are GA since 2026-01-15 (6-day "shortlived" profile, which Caddy supports), but they tie the iPhone Shortcut to an IP and Caddy issue reports exist. Use them only as a fallback.
 - **GitHub Actions pipeline:** `build-test` (restore, CSharpier check, build, `dotnet test` with Testcontainers) → `publish` (docker buildx, push app and migrator images to **GHCR** tagged with the commit SHA) → `deploy` (SSH to the VPS with a deploy key, `docker compose pull && docker compose up -d`, gated on `main` and a GitHub Environment). Current action majors: `actions/checkout@v7`, `actions/setup-dotnet@v6`, `docker/build-push-action@v7`.
 - Secrets (bot token, webhook secret, DB password) live in GitHub Environment secrets and a `.env` on the VPS (chmod 600). Never commit them.
-- **Backups:** nightly `pg_dump` (cron on the host or a sidecar) to off-box storage (Hetzner Storage Box, Backblaze B2 via rclone). A finance app without backups fails a portfolio review.
+- **Backups:** nightly `pg_dump` (cron on the host or a sidecar) encrypted (age or gpg) and sent to storage **outside Oracle** (Backblaze B2 or Cloudflare R2 free tier via rclone). Oracle Object Storage alone is not a backup: an account suspension takes it down together with the VM. A finance app without backups fails a portfolio review.
 - **Uptime:** a free external pinger (UptimeRobot / Better Stack free tier) on `/health`, alerting by Telegram or email.
 
 ---
@@ -206,16 +206,16 @@ Internet ──443──> caddy (auto TLS) ──> app:8080 (ASP.NET Core: /api/
 
 | Option | Cost (approx.) | 24/7? | Verdict |
 |--------|----------------|-------|---------|
-| **Hetzner Cloud CX23** (x86, 2 vCPU / 4 GB) | ~€5.49/mo + €0.50 IPv4, excl. VAT, after the **15 June 2026 price increase**. Some reports say availability is constrained. | Yes | **Recommended.** EU (DE/FI) data locality next to Poland, enough RAM for app + Postgres + Caddy, mature tooling. Check the live price in the console. (MEDIUM: prices from secondary sources) |
+| **Hetzner Cloud CX23** (x86, 2 vCPU / 4 GB) | ~€5.49/mo + €0.50 IPv4, excl. VAT, after the **15 June 2026 price increase**. Some reports say availability is constrained. | Yes | **Paid fallback** (user decision: hosting must be free). EU (DE/FI) data locality next to Poland, enough RAM for app + Postgres + Caddy, mature tooling. Check the live price in the console. (MEDIUM: prices from secondary sources) |
 | Hetzner Cloud CAX11 (ARM64, 2 vCPU / 4 GB) | Same price band | Yes | Equally good if x86 is out of stock. Build arm64 images. |
 | Other EU VPS (Netcup, OVHcloud VPS, Contabo) | ~€4–7/mo | Yes | Fine alternatives. Contabo is cheap but has a weaker performance and support reputation. |
-| Oracle Cloud Always Free (Ampere A1) | €0 | Nominally | **Not as primary.** Oracle reclaims idle Always Free instances (95th-percentile CPU < 20% over 7 days, and this bot is idle most of the time). The A1 allowance was reportedly cut from 4 OCPU/24 GB to 2 OCPU/12 GB in Aug 2026, and "out of capacity" errors are common. Fine as a free staging box. (LOW–MEDIUM) |
+| Oracle Cloud Always Free (Ampere A1) | €0 | Nominally | **Chosen (user decision: strictly free).** Risks: Oracle reclaims idle Always Free instances (95th-percentile CPU < 20% over 7 days, and this bot is idle most of the time) and can suspend free accounts. Mitigations: upgrade the account to Pay As You Go (verify in Oracle docs that idle reclamation does not apply to it; usage inside Always Free limits stays free), set a budget alert, keep encrypted backups outside Oracle, keep everything in Docker for a quick move. The A1 allowance was reportedly cut from 4 OCPU/24 GB to 2 OCPU/12 GB in Aug 2026, and "out of capacity" errors are common. (LOW–MEDIUM) |
 | Render free web service | €0 | **No.** Spins down after 15 min idle, ~1 min cold start | **Reject.** An Apple Pay Shortcut firing into a cold service times out and the transaction is lost. Telegram webhooks also lag. |
 | Fly.io | No free allowance for new accounts since late 2024 | Paid only | Possible paid option, but no cheaper than Hetzner and more moving parts. |
 | Koyeb free | Restricted / card-hold, may sleep | Uncertain | Reject (conflicting reports). |
 | Azure App Service F1 | €0 | No "Always On" on free tier, so it idles | Reject for webhook ingestion. |
 
-**Bottom line:** spend about €6/month on a Hetzner VPS. A free tier that sleeps or gets reclaimed undermines the core value ("every Apple Pay payment arrives automatically").
+**Bottom line (research):** about €6/month on a Hetzner VPS is the lowest-risk option. **Decision (user, 2026-11-14):** hosting must be free, so the project runs on Oracle Cloud Always Free with the mitigations listed in the table; Hetzner stays the fallback. A free tier that sleeps is still rejected.
 
 ---
 
@@ -261,7 +261,7 @@ Internet ──443──> caddy (auto TLS) ──> app:8080 (ASP.NET Core: /api/
 | MediatR (v13+), AutoMapper (v15+), FluentAssertions (v8+) | Now commercially licensed (Lucky Penny / Xceed). Licensing friction in a public repo, and MediatR adds indirection with little benefit at this size. | Plain handler classes + DI; manual mapping; AwesomeAssertions or `Assert`. |
 | Moq | 2023 SponsorLink controversy; reputationally risky in a portfolio. | NSubstitute. |
 | Hashing API tokens with bcrypt/Argon2, or storing them plaintext | Plaintext violates the constraint. A slow KDF is pointless for 256-bit random tokens and slows every ingestion request. | SHA-256 of a 32-byte random token, constant-time compare. |
-| Free tiers that sleep (Render, Koyeb, Azure F1) | Cold start loses Apple Pay ingestion events. | ~€6/month VPS. |
+| Free tiers that sleep (Render, Koyeb, Azure F1) | Cold start loses Apple Pay ingestion events. | An always-on VM: Oracle Always Free (chosen), Hetzner ~€6/month as fallback. |
 | PostgreSQL 19 | Still RC2 as of 2026-11-14. | PostgreSQL 18. |
 | Watchtower-style auto-updating containers | Uncontrolled deploys, no migration ordering. | Explicit CI deploy step (`compose pull && up -d`). |
 
@@ -269,7 +269,7 @@ Internet ──443──> caddy (auto TLS) ──> app:8080 (ASP.NET Core: /api/
 
 ## Stack Patterns by Variant
 
-**If the VPS is ARM (Hetzner CAX):**
+**If the VM is ARM (Oracle Ampere A1, Hetzner CAX):**
 - Build `linux/arm64` images on `ubuntu-24.04-arm` runners, or multi-arch with buildx.
 - Migration bundle with `-r linux-arm64`.
 

@@ -1,0 +1,5 @@
+# Automatic HTTPS for $DOMAIN (Let's Encrypt; a local CA for "localhost").
+# No `log` directive on purpose: no access logs with paths and client IPs.
+{$DOMAIN} {
+	reverse_proxy app:8080
+}

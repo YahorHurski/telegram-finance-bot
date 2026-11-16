@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-16T17:41:56.613Z"
-last_activity: 2026-11-15
-last_activity_desc: "Completed quick task 261115-68j: правки планировочных документов по итогам ревью (53/53 требований сопоставлены с фазами)"
-state_head: f81173aa1a8f153eadc3595b01d73b8e57f62774
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-11-16T20:56:17.383Z"
+last_activity: 2026-11-16
+last_activity_desc: Phase 01 execution started
+state_head: 8e978b44e4d5ad42e95b0d29a71e673be297e9d2
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** Каждая оплата Apple Pay автоматически и без дублей попадает в бот, и я в любой момент вижу, сколько осталось от недельного лимита (200 zł).
-**Current focus:** Phase 1: Ходячий скелет
+**Current focus:** Phase 01 — Ходячий скелет
 
 ## Current Position
 
-Phase: 01 (Ходячий скелет) — READY TO EXECUTE
-Plan: 0 of 0 in current phase
+Phase: 01 (Ходячий скелет) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-11-15 - BAL-04: рядом с балансом показывается давность последней сверки
+Last activity: 2026-11-16 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 7 min | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -72,6 +77,10 @@ Recent decisions affecting current work:
 - [Balance]: Рядом с балансом показывается давность последней сверки `/balance N` (BAL-04)
 - [Roadmap]: Баланс (BAL) объединён с лимитами в Phase 5: оба считаются из истории трат
 - [Roadmap]: Приватность (PRIV-01, PRIV-02) вынесена в Phase 7, когда известны все хранимые данные
+- [Phase 01]: amount IS NULL is the 'amount not parsed' status; no status column until Phase 3
+- [Phase 01]: Remainder uses the week of the purchase time (Europe/Warsaw), not server arrival
+- [Phase 01]: EF Core pinned to 10.0.15 transitively (CentralPackageTransitivePinningEnabled) so app and tests share one EF version
+- [Phase 01]: Rate limit is one global fixed window 'ingest' 30/min; body limit 64 KB in Kestrel
 
 ### Pending Todos
 
@@ -102,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T16:32:10.893Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-hodyachiy-skelet/01-CONTEXT.md
+Last session: 2026-11-16T20:56:17.331Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None

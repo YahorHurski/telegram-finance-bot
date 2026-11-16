@@ -1,0 +1,2 @@
+# Shell scripts run on Linux: CRLF from a Windows checkout would break them ("bad interpreter")
+*.sh text eol=lf

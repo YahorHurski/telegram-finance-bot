@@ -19,8 +19,10 @@ public static class Messages
 
     public static string Confirmation(Transaction tx, decimal spent)
     {
+        if (tx.Amount is null)   // D-03
+            return $"⚠️ Не разобрал сумму: «{Esc(tx.AmountRaw ?? "")}» · {Esc(tx.Merchant)}";
         var limit = Week.Limit.ToString("0", Nfi);
         // "−" is U+2212
-        return $"− {Money(tx.Amount!.Value)} zł · {Esc(tx.Merchant)}\n🟢 Осталось {Money(Week.Limit - spent)} из {limit} zł";
+        return $"− {Money(tx.Amount.Value)} zł · {Esc(tx.Merchant)}\n🟢 Осталось {Money(Week.Limit - spent)} из {limit} zł";
     }
 }

@@ -162,19 +162,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SPIKE-01 | Phase 3 | Pending |
 | SPIKE-02 | Phase 3 | Pending |
-| FND-01 | Phase 1 | Pending |
+| FND-01 | Phase 2 | Pending |
 | FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
+| FND-03 | Phase 2 | Pending |
+| FND-04 | Phase 2 | Pending |
 | FND-05 | Phase 1 | Pending |
-| FND-06 | Phase 1 | Pending |
-| ACC-01 | Phase 2 | Pending |
-| ACC-02 | Phase 2 | Pending |
-| ACC-03 | Phase 2 | Pending |
-| ACC-04 | Phase 2 | Pending |
-| ACC-05 | Phase 2 | Pending |
-| ACC-06 | Phase 2 | Pending |
-| ACC-07 | Phase 2 | Pending |
+| FND-06 | Phase 2 | Pending |
+| ACC-01 | Phase 7 | Pending |
+| ACC-02 | Phase 7 | Pending |
+| ACC-03 | Phase 7 | Pending |
+| ACC-04 | Phase 7 | Pending |
+| ACC-05 | Phase 7 | Pending |
+| ACC-06 | Phase 7 | Pending |
+| ACC-07 | Phase 3 | Pending |
 | ING-01 | Phase 3 | Pending |
 | ING-02 | Phase 3 | Pending |
 | ING-03 | Phase 3 | Pending |
@@ -221,4 +221,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-11-14*
-*Last updated: 2026-11-15 after adding balance reconciliation date to BAL-04*
+*Last updated: 2026-11-16 after walking-skeleton roadmap restructure*

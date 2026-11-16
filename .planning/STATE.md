@@ -4,10 +4,10 @@ current_phase: 1
 current_phase_name: Фундамент
 status: planning
 stopped_at: Roadmap and STATE initialized; next step is `/gsd-plan-phase 1`
-last_updated: "2026-11-15T03:32:17.974Z"
+last_updated: "2026-11-16T04:33:53.258Z"
 last_activity: 2026-11-15
 last_activity_desc: "Completed quick task 261115-68j: правки планировочных документов по итогам ревью (53/53 требований сопоставлены с фазами)"
-state_head: 1f78743ad89f2121dd369fe70e908271a4004c50
+state_head: 1abb7cd6e5ee0046ee42012433da721889d68c8c
 progress:
   total_phases: 7
   completed_phases: 0
@@ -87,6 +87,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261115-68j | Правки планировочных документов по итогам ревью | 2026-11-15 | 1f78743 | [261115-68j-review-fixes-planning-docs](./quick/261115-68j-review-fixes-planning-docs/) |
+| 2 | Спайк payload'ов перенесён из Phase 1 в предусловие Phase 3 | 2026-11-16 | 1abb7cd | — |
 
 ## Deferred Items
 

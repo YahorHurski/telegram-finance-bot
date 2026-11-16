@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Standalone spike, not part of FinanceBot.slnx: does ScottPlot's native graphics stack load in aspnet:10.0 on arm64? -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Otherwise the root Directory.Packages.props would demand the version there -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The graphics engine (3.119) comes transitively; a direct 4.x reference would break ScottPlot -->
+    <PackageReference Include="ScottPlot" Version="5.1.59" />
+  </ItemGroup>
+
+</Project>

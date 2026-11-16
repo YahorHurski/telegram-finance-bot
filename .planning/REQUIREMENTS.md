@@ -9,6 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Validation Spike
 
+Формат payload'ов пока не определён. Данные собираются пассивно (автоматизация «Транзакция» → «Заметки») с 2026-11-16, пока идут фазы 1–2; закрыть до планирования Phase 3.
+
 - [ ] **SPIKE-01**: Собран корпус реальных payload'ов iOS-автоматизации «Транзакция»/«Wallet» с iPhone пользователя (карты PKO BP, mBank, Millennium): формат суммы, даты, продавца; случаи — сумма ≥1000 и <1 zł, отклонённая оплата, пустая сумма/продавец, иностранная валюта, возврат, Apple Watch, авиарежим, поведение «Получить содержимое URL» при 4xx/5xx; как часто автоматизация срабатывает дважды на одну оплату (от этого зависит поведение дублей по умолчанию, ING-06)
 - [ ] **SPIKE-02**: Проверено, может ли шаблон Команды через «Вопросы при импорте» принять токен без вшивания секрета
 
@@ -140,6 +142,8 @@ Deferred. Tracked but not in current roadmap.
 
 **До планирования Phase 3 (по данным спайка):**
 
+- Собран и обезличен корпус payload'ов (SPIKE-01); формат суммы, даты и продавца описан
+
 - Поведение дублей по умолчанию (ING-06): скрывать с кнопкой «вернуть» или засчитывать с вопросом «удалить?»
 
 **В discuss-phase фазы лимитов (Phase 5):**
@@ -156,8 +160,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SPIKE-01 | Phase 1 | Pending |
-| SPIKE-02 | Phase 1 | Pending |
+| SPIKE-01 | Phase 3 | Pending |
+| SPIKE-02 | Phase 3 | Pending |
 | FND-01 | Phase 1 | Pending |
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 1 | Pending |

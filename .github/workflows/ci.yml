@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Minimum for GITHUB_TOKEN: gitleaks reads PR commits, nothing writes
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest   # Docker is preinstalled, Testcontainers needs no setup
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # gitleaks scans the whole history, not just the last commit
+
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false   # PR comments would need write permission
+
+      - name: .env must stay ignored
+        run: git check-ignore -q .env
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - run: dotnet test

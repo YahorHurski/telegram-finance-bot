@@ -1,0 +1,42 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env                     # Bot__IngestToken, Bot__TelegramToken, Bot__OwnerChatId
+    environment:
+      ConnectionStrings__Default: Host=postgres;Database=financebot;Username=financebot;Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+    depends_on:
+      postgres: { condition: service_healthy }
+    # no ports: only Caddy talks to the app, inside the compose network
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: financebot
+      POSTGRES_DB: financebot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql     # PG18+ moved the volume here; the old .../data path loses data on recreate
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financebot -d financebot"]
+      interval: 5s
+      retries: 12
+    # no ports: the database is reachable only inside the compose network
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]        # the only public entry point
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data               # certificates survive container recreation (Let's Encrypt rate limits)
+      - caddy_config:/config
+    depends_on: [app]
+
+volumes:
+  pgdata: {}
+  caddy_data: {}
+  caddy_config: {}

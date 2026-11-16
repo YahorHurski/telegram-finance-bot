@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-11-16T21:08:27.949Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-11-16T21:29:19.675Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 01 execution started
-state_head: f2d815b52cb77cef4683e4461792b151a3d698b6
+state_head: 08c7958f34005645f3b95725ff8438eef2541826
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 01 (Ходячий скелет) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 7 min | 2 tasks | 20 files |
 | Phase 01 P02 | 3 min | 2 tasks | 4 files |
 | Phase 01 P03 | 4 min | 2 tasks | 8 files |
+| Phase 01 P04 | 18 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Unparsed raw amount is truncated to 100 chars + ellipsis before HTML escaping
 - [Phase 01]: Serilog levels fixed in code (Information; AspNetCore/EF/HttpClient=Warning), no Serilog config section; Logging sections removed from appsettings
 - [Phase 01]: CI ci.yml: push(main)+pull_request, gitleaks-action@v3 over full history, git check-ignore .env, dotnet test; no deploy job until Phase 2
+- [Phase 01]: 01-04: Connection string carries Gss Encryption Mode=Disable (aspnet:10.0 has no libgssapi; Npgsql probe printed an error on every start)
+- [Phase 01]: 01-04: Runtime image is full aspnet:10.0 (noble), not chiseled; migrations via docker compose run --rm app migrate with the same image
+- [Phase 01]: 01-04: arm64 under QEMU is no evidence for .NET (runtime crashes even without ScottPlot); SkiaSharp arm64 proof is the native spike run on the VM in 01-06
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T21:08:27.901Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-11-16T21:29:19.615Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None

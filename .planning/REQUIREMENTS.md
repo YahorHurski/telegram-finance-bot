@@ -20,7 +20,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (по документации Oracle проверено, что отбор простаивающих инстансов на него не распространяется), настроен бюджетный алерт
 - [ ] **FND-03**: CI (GitHub Actions) собирает, прогоняет тесты (включая интеграционные с реальным PostgreSQL) и деплоит при пуше в main
 - [ ] **FND-04**: Миграции БД применяются отдельным одноразовым шагом (EF migration bundle) при деплое
-- [ ] **FND-05**: Секреты не попадают в репозиторий (gitleaks в CI, .gitignore с первого коммита)
+- [x] **FND-05**: Секреты не попадают в репозиторий (gitleaks в CI, .gitignore с первого коммита)
 - [ ] **FND-06**: Ежедневный шифрованный бэкап БД во внешнее хранилище вне Oracle (Backblaze B2 или Cloudflare R2); восстановление проверено хотя бы раз
 
 ### Registration & Access
@@ -166,7 +166,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 2 | Pending |
 | FND-04 | Phase 2 | Pending |
-| FND-05 | Phase 1 | Pending |
+| FND-05 | Phase 1 | Complete |
 | FND-06 | Phase 2 | Pending |
 | ACC-01 | Phase 7 | Pending |
 | ACC-02 | Phase 7 | Pending |

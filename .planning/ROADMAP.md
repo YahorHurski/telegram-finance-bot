@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Все таблицы с пользовательскими данными содержат `user_id` с первой миграции (пользователь пока один), чтобы мультипользовательность в Phase 7 не требовала переделки схемы
   5. Пуш в main запускает GitHub Actions со сборкой и тестами; секреты только в `.env`, который в `.gitignore` с первого коммита
   6. Логи сервиса не содержат сумм, продавцов и токенов: это задано настройкой логирования с первого деплоя и проверяется автотестом
-**Plans**: 2/6 plans executed
+**Plans**: 3/6 plans executed
 
 Plans:
 **Wave 1**
@@ -41,7 +41,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 01-02-PLAN.md — Честные цифры: разбор сумм и времени, неделя пн–вс Warsaw, перерасход 🔴, формат и экранирование (wave 2)
-- [ ] 01-03-PLAN.md — PRIV-03: Serilog с уровнями в коде + автотест логов; CI с gitleaks (wave 2)
+- [x] 01-03-PLAN.md — PRIV-03: Serilog с уровнями в коде + автотест логов; CI с gitleaks (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-04-PLAN.md — Docker Compose (app, postgres, caddy) с локальным HTTPS-прогоном, deploy.sh, docs/deploy.md, docs/shortcut.md, спайк SkiaSharp arm64 (wave 3)
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ходячий скелет | 2/6 | In Progress | - |
+| 1. Ходячий скелет | 3/6 | In Progress | - |
 | 2. Надёжность и доставка | 0/0 | Not started | - |
 | 3. Приём трат через Apple Pay и вручную | 0/0 | Not started | - |
 | 4. Управление тратами и обучаемые категории | 0/0 | Not started | - |

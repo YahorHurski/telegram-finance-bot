@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-11-16T21:02:00.146Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-11-16T21:08:27.949Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 01 execution started
-state_head: 30e80f083cbd9d5b54eca3eae473756277a4e42b
+state_head: f2d815b52cb77cef4683e4461792b151a3d698b6
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 01 (Ходячий скелет) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 01 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 2 tasks | 20 files |
 | Phase 01 P02 | 3 min | 2 tasks | 4 files |
+| Phase 01 P03 | 4 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Rate limit is one global fixed window 'ingest' 30/min; body limit 64 KB in Kestrel
 - [Phase 01]: Overspend starts strictly above the limit: spent == 200 stays green with 0,00
 - [Phase 01]: Unparsed raw amount is truncated to 100 chars + ellipsis before HTML escaping
+- [Phase 01]: Serilog levels fixed in code (Information; AspNetCore/EF/HttpClient=Warning), no Serilog config section; Logging sections removed from appsettings
+- [Phase 01]: CI ci.yml: push(main)+pull_request, gitleaks-action@v3 over full history, git check-ignore .env, dotnet test; no deploy job until Phase 2
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T21:02:00.098Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-11-16T21:08:27.901Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-11-16T20:56:17.383Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-11-16T21:02:00.146Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 01 execution started
-state_head: 8e978b44e4d5ad42e95b0d29a71e673be297e9d2
+state_head: 30e80f083cbd9d5b54eca3eae473756277a4e42b
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 01 (Ходячий скелет) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 01 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 7 min | 2 tasks | 20 files |
+| Phase 01 P02 | 3 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Remainder uses the week of the purchase time (Europe/Warsaw), not server arrival
 - [Phase 01]: EF Core pinned to 10.0.15 transitively (CentralPackageTransitivePinningEnabled) so app and tests share one EF version
 - [Phase 01]: Rate limit is one global fixed window 'ingest' 30/min; body limit 64 KB in Kestrel
+- [Phase 01]: Overspend starts strictly above the limit: spent == 200 stays green with 0,00
+- [Phase 01]: Unparsed raw amount is truncated to 100 chars + ellipsis before HTML escaping
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T20:56:17.331Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-11-16T21:02:00.098Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

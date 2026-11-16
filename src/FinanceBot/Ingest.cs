@@ -19,7 +19,9 @@ static class Ingest
         // Body read by hand, not bound to a parameter: it is stored verbatim even when it is not valid JSON (D-07)
         using var reader = new StreamReader(req.Body);
         var raw = await reader.ReadToEndAsync();
-        var p = JsonSerializer.Deserialize<Payload>(raw, JsonSerializerOptions.Web);
+        Payload? p = null;
+        try { p = JsonSerializer.Deserialize<Payload>(raw, JsonSerializerOptions.Web); }
+        catch (JsonException) { }   // malformed JSON or amount as a number: saved as "not parsed" (D-10), body kept
 
         var now = clock.GetCurrentInstant();
         var tx = new Transaction
@@ -32,11 +34,15 @@ static class Ingest
         db.Transactions.Add(tx);
         await db.SaveChangesAsync();
 
-        // Week of the purchase, not of the arrival: a late payment still lands in its own week
-        var (start, end) = Week.Containing(tx.OccurredAt);
-        var spent = await db.Transactions
-            .Where(t => t.UserId == tx.UserId && t.Amount != null && t.OccurredAt >= start && t.OccurredAt < end)
-            .SumAsync(t => t.Amount) ?? 0m;
+        decimal spent = 0;
+        if (tx.Amount is not null)   // unparsed amount: not part of the limit, no sum needed
+        {
+            // Week of the purchase, not of the arrival: a late payment still lands in its own week
+            var (start, end) = Week.Containing(tx.OccurredAt);
+            spent = await db.Transactions
+                .Where(t => t.UserId == tx.UserId && t.Amount != null && t.OccurredAt >= start && t.OccurredAt < end)
+                .SumAsync(t => t.Amount) ?? 0m;
+        }
 
         try
         {

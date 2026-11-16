@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Serilog.Core;
 using Telegram.Bot;
 using Testcontainers.PostgreSql;
 
@@ -17,15 +18,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     readonly PostgreSqlContainer _pg = new PostgreSqlBuilder("postgres:18-alpine").Build();
     public ITelegramBotClient Bot { get; } = Substitute.For<ITelegramBotClient>();
+    public CapturingSink Logs { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder b)
     {
-        b.UseEnvironment("Production");
+        b.UseEnvironment("Production");   // the privacy test checks exactly the prod log configuration
         b.UseSetting("ConnectionStrings:Default", _pg.GetConnectionString());
         b.UseSetting("Bot:IngestToken", IngestToken);
         b.UseSetting("Bot:TelegramToken", BotToken);
         b.UseSetting("Bot:OwnerChatId", OwnerChatId.ToString());
-        b.ConfigureTestServices(s => s.AddSingleton(Bot));
+        b.ConfigureTestServices(s =>
+        {
+            s.AddSingleton(Bot);
+            s.AddSingleton<ILogEventSink>(Logs);   // Program picks it up via ReadFrom.Services
+        });
     }
 
     public async ValueTask InitializeAsync()

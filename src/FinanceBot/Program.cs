@@ -2,9 +2,21 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NodaTime;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 using Telegram.Bot;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSerilog((sp, lc) => lc
+    // Levels live in code, not in appsettings: an env var in prod cannot make logs more verbose (PRIV-03)
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)  // Telegram URLs carry the bot token in the path
+    .ReadFrom.Services(sp)   // tests plug in a capturing ILogEventSink here
+    .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 // Config is read inside DI factories, not at the top level: `dotnet ef` and the `migrate` branch run without secrets
 builder.Services.AddOptions<BotOptions>().BindConfiguration("Bot")
@@ -36,6 +48,7 @@ if (args is ["migrate"])  // docker compose run --rm app migrate
     return;
 }
 
+app.UseSerilogRequestLogging();   // one line per request: method, path, status, time; no body, no headers
 app.UseRateLimiter();
 app.MapHealthChecks("/health");
 app.MapPost("/api/v1/transactions", Ingest.Handle).RequireRateLimiting("ingest");

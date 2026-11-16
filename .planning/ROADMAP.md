@@ -33,7 +33,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Все таблицы с пользовательскими данными содержат `user_id` с первой миграции (пользователь пока один), чтобы мультипользовательность в Phase 7 не требовала переделки схемы
   5. Пуш в main запускает GitHub Actions со сборкой и тестами; секреты только в `.env`, который в `.gitignore` с первого коммита
   6. Логи сервиса не содержат сумм, продавцов и токенов: это задано настройкой логирования с первого деплоя и проверяется автотестом
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+- [ ] 01-01-PLAN.md — Трассер: POST /api/v1/transactions → Postgres → SendMessage владельцу → 201; отказ без токена, сохранение кривых запросов, user_id (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 01-02-PLAN.md — Честные цифры: разбор сумм и времени, неделя пн–вс Warsaw, перерасход 🔴, формат и экранирование (wave 2)
+- [ ] 01-03-PLAN.md — PRIV-03: Serilog с уровнями в коде + автотест логов; CI с gitleaks (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 01-04-PLAN.md — Docker Compose (app, postgres, caddy) с локальным HTTPS-прогоном, deploy.sh, docs/deploy.md, docs/shortcut.md, спайк SkiaSharp arm64 (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 01-05-PLAN.md — Решение по формулировке PAYG, ручные шаги Oracle/DuckDNS/BotFather, подготовка VM по SSH (wave 4, чекпоинты)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 01-06-PLAN.md — Боевой запуск на Oracle, внешние проверки, реальная оплата Apple Pay → Telegram (wave 5, чекпоинт)
 **Notes**: Один проект ASP.NET Core; разделение на слои делается рефакторингом в Phase 2. Telegram только отправляет сообщения (`SendMessage`); вебхук и приём сообщений появляются в Phase 3. Формат payload'ов ещё не определён (см. SPIKE-01), поэтому разбор суммы временный, а сырое тело сохраняется всегда: оно же пополняет корпус. Миграции на этом этапе применяются простым ручным шагом; отдельный migrator появляется в Phase 2. Если VM на Ampere A1 (ARM64): образы собирать под linux/arm64 и заранее проверить нативные библиотеки SkiaSharp/ScottPlot в выбранном базовом образе (chiseled-extra или noble), так как от этого зависят диаграммы в Phase 6.
 
 ### Phase 2: Надёжность и доставка

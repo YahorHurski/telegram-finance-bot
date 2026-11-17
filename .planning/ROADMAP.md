@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: FND-02, FND-05, PRIV-03 (плюс упрощённые версии ING-03 и MAN-03, которые полностью закрываются в Phase 3)
 **Success Criteria** (what must be TRUE):
-  1. `https://<поддомен>.duckdns.org/health` отвечает 200 с Oracle Cloud Always Free VM; стек поднят через Docker Compose (app, postgres, caddy); аккаунт Oracle переведён на Pay As You Go (по документации проверено, что отбор простаивающих инстансов на него не распространяется), настроен бюджетный алерт
+  1. `https://<поддомен>.duckdns.org/health` отвечает 200 с Oracle Cloud Always Free VM; стек поднят через Docker Compose (app, postgres, caddy); аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен, см. STATE.md), настроен бюджетный алерт
   2. `POST /tx` с токеном из `.env` (из iOS-Команды или curl) сохраняет трату в Postgres вместе с сырым телом запроса; запрос без токена или с неверным токеном отклоняется
   3. После сохранения бот присылает владельцу в Telegram сумму, продавца и остаток недельного лимита; лимит 200 zł и неделя пн–вс по Europe/Warsaw пока заданы константами
   4. Все таблицы с пользовательскими данными содержат `user_id` с первой миграции (пользователь пока один), чтобы мультипользовательность в Phase 7 не требовала переделки схемы

@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation & Delivery
 
 - [ ] **FND-01**: Решение из 5 проектов (Domain, Application, Infrastructure, Telegram, Api) + тестовые проекты; архитектурные тесты проверяют направление зависимостей
-- [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (по документации Oracle проверено, что отбор простаивающих инстансов на него не распространяется), настроен бюджетный алерт
+- [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен), настроен бюджетный алерт
 - [ ] **FND-03**: CI (GitHub Actions) собирает, прогоняет тесты (включая интеграционные с реальным PostgreSQL) и деплоит при пуше в main
 - [ ] **FND-04**: Миграции БД применяются отдельным одноразовым шагом (EF migration bundle) при деплое
 - [x] **FND-05**: Секреты не попадают в репозиторий (gitleaks в CI, .gitignore с первого коммита)

@@ -2,10 +2,10 @@
 phase: "1"
 slug: "hodyachiy-skelet"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: true) (#2117)
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-11-16"
 ---
 
@@ -42,20 +42,20 @@ created: "2026-11-16"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 1-01-01 | 01 | 1 | ING-03, MAN-03, FND-05 | T-01-01, T-01-06, T-01-SC | токен проверяется до чтения тела (SHA-256 + FixedTimeEquals); `.env` игнорируется с первого коммита | integration (tracer) | `dotnet test --filter-class "*IngestTests"` | ❌ W0 (создаётся задачей) | ⬜ pending |
-| 1-01-02 | 01 | 1 | ING-03, MAN-03 | T-01-01, T-01-02, T-01-04, T-01-05 | 401 без следов в БД и Telegram; кривой запрос сохраняется; 201 после сохранения даже при сбое Telegram; 30/мин и 64 KB | integration | `dotnet test --filter-class "*IngestTests" --filter-class "*SchemaTests"` | ❌ W0 | ⬜ pending |
-| 1-02-01 | 02 | 2 | ING-03, MAN-03 | T-01-07 | чужая валюта, ≤ 0, ≥ 1 000 000 → null и не идут в лимит | unit | `dotnet test --filter-class "*ParsingTests" --filter-class "*WeekTests"` | ❌ | ⬜ pending |
-| 1-02-02 | 02 | 2 | MAN-03 | T-01-08 | экранирование `&<>`, обрезка исходной строки до 100 символов | unit (tdd) | `dotnet test --filter-class "*MessagesTests"` | ❌ | ⬜ pending |
-| 1-03-01 | 03 | 2 | PRIV-03 | T-01-09 | в логах нет сумм, продавцов, карт, тел и токенов; лог не пуст | integration (tdd) | `dotnet test --filter-class "*LogPrivacyTests"` | ❌ | ⬜ pending |
-| 1-03-02 | 03 | 2 | FND-05 | T-01-10, T-01-11 | gitleaks по всей истории, `.env` в .gitignore | static / CI | `gitleaks git --no-banner --redact .` и `git check-ignore -q .env` | ✅ gitleaks 8.30.1 установлен | ⬜ pending |
-| 1-04-01 | 04 | 3 | FND-02, FND-05 | T-01-12, T-01-13, T-01-14, T-01-15 | порты только у caddy; не root; `.env` вне образа; логи контейнера чистые | smoke (docker) | `docker compose config --quiet`, проверка портов через `docker compose config --format json`, `curl -kfsS https://localhost/health` | ❌ | ⬜ pending |
-| 1-04-02 | 04 | 3 | FND-02 | T-01-16 | в документации нет секретов | static | `bash -n deploy.sh`, `git ls-files -s deploy.sh`, `gitleaks dir --no-banner --redact docs` | ❌ | ⬜ pending |
-| 1-04-03 | 04 | 3 | FND-02 (ROADMAP Notes, arm64) | T-01-SC | ScottPlot проверен на nuget.org до restore | smoke (docker) | `docker run --rm skia-spike`, `docker run --rm --platform linux/arm64 skia-spike-arm64` | ❌ | ⬜ pending |
-| 1-05-01 | 05 | 4 | FND-02 | — | N/A (решение по формулировке PAYG) | manual (checkpoint:decision) | — | — | ⬜ pending |
-| 1-05-02 | 05 | 4 | FND-02 | T-01-17, T-01-20 | SSH только по ключу; ресурсы только Always Free; бюджетный алерт | manual (checkpoint:human-action) | проверка агентом: `ssh -o BatchMode=yes ubuntu@VM_IP uname -m` | — | ⬜ pending |
-| 1-05-03 | 05 | 4 | FND-02 | T-01-17, T-01-18, T-01-21 | `.env` 600, секреты сгенерированы на VM; порт 80 проверен до Caddy | remote smoke | `ssh ... "stat -c %a ~/finance-bot/.env"`, `ssh ... "sudo iptables -C INPUT ..."`, `curl ... http://SUBDOMAIN.duckdns.org/` | — | ⬜ pending |
-| 1-06-01 | 06 | 5 | FND-02, MAN-03 | T-01-22 | токен бота не покидает VM | manual (checkpoint:human-action) | проверка агентом: `ssh ... "grep -cE '^Bot__TelegramToken=...' ~/finance-bot/.env"` | — | ⬜ pending |
-| 1-06-02 | 06 | 5 | FND-02, ING-03, MAN-03, PRIV-03 | T-01-23, T-01-24, T-01-25, T-01-26 | HTTPS с доверенным сертификатом, 401, 5432 закрыт, логи прода чистые, возврат после reboot | remote smoke + UAT | `curl -fsS https://SUBDOMAIN.duckdns.org/health` и проверки из плана; human-check: реальная оплата | — | ⬜ pending |
+| 1-01-01 | 01 | 1 | ING-03, MAN-03, FND-05 | T-01-01, T-01-06, T-01-SC | токен проверяется до чтения тела (SHA-256 + FixedTimeEquals); `.env` игнорируется с первого коммита | integration (tracer) | `dotnet test --filter-class "*IngestTests"` | ✅ | ✅ green |
+| 1-01-02 | 01 | 1 | ING-03, MAN-03 | T-01-01, T-01-02, T-01-04, T-01-05 | 401 без следов в БД и Telegram; кривой запрос сохраняется; 201 после сохранения даже при сбое Telegram; 30/мин и 64 KB | integration | `dotnet test --filter-class "*IngestTests" --filter-class "*SchemaTests"` | ✅ | ✅ green (аудит: добавлены Owner_Over30RequestsPerMinute_Gets429, BodyOver64KB_IsRejectedAndNotSaved на реальном Kestrel) |
+| 1-02-01 | 02 | 2 | ING-03, MAN-03 | T-01-07 | чужая валюта, ≤ 0, ≥ 1 000 000 → null и не идут в лимит | unit | `dotnet test --filter-class "*ParsingTests" --filter-class "*WeekTests"` | ✅ | ✅ green |
+| 1-02-02 | 02 | 2 | MAN-03 | T-01-08 | экранирование `&<>`, обрезка исходной строки до 100 символов | unit (tdd) | `dotnet test --filter-class "*MessagesTests"` | ✅ | ✅ green |
+| 1-03-01 | 03 | 2 | PRIV-03 | T-01-09 | в логах нет сумм, продавцов, карт, тел и токенов; лог не пуст | integration (tdd) | `dotnet test --filter-class "*LogPrivacyTests"` | ✅ | ✅ green |
+| 1-03-02 | 03 | 2 | FND-05 | T-01-10, T-01-11 | gitleaks по всей истории, `.env` в .gitignore | static / CI | `gitleaks git --no-banner --redact .` и `git check-ignore -q .env` | ✅ | ✅ green (gitleaks: no leaks; .env ignored) |
+| 1-04-01 | 04 | 3 | FND-02, FND-05 | T-01-12, T-01-13, T-01-14, T-01-15 | порты только у caddy; не root; `.env` вне образа; логи контейнера чистые | smoke (docker) | `docker compose config --quiet`, проверка портов через `docker compose config --format json`, `curl -kfsS https://localhost/health` | ✅ | ✅ green на VM 2026-11-17 (локально compose config требует .env — manual) |
+| 1-04-02 | 04 | 3 | FND-02 | T-01-16 | в документации нет секретов | static | `bash -n deploy.sh`, `git ls-files -s deploy.sh`, `gitleaks dir --no-banner --redact docs` | ✅ | ✅ green (bash -n deploy.sh) |
+| 1-04-03 | 04 | 3 | FND-02 (ROADMAP Notes, arm64) | T-01-SC | ScottPlot проверен на nuget.org до restore | smoke (docker) | `docker run --rm skia-spike`, `docker run --rm --platform linux/arm64 skia-spike-arm64` | ✅ | ✅ green (01-04-SUMMARY) |
+| 1-05-01 | 05 | 4 | FND-02 | — | N/A (решение по формулировке PAYG) | manual (checkpoint:decision) | — | ✅ | ✅ manual |
+| 1-05-02 | 05 | 4 | FND-02 | T-01-17, T-01-20 | SSH только по ключу; ресурсы только Always Free; бюджетный алерт | manual (checkpoint:human-action) | проверка агентом: `ssh -o BatchMode=yes ubuntu@VM_IP uname -m` | ✅ | ✅ manual 2026-11-17 |
+| 1-05-03 | 05 | 4 | FND-02 | T-01-17, T-01-18, T-01-21 | `.env` 600, секреты сгенерированы на VM; порт 80 проверен до Caddy | remote smoke | `ssh ... "stat -c %a ~/finance-bot/.env"`, `ssh ... "sudo iptables -C INPUT ..."`, `curl ... http://SUBDOMAIN.duckdns.org/` | ✅ | ✅ manual 2026-11-17 |
+| 1-06-01 | 06 | 5 | FND-02, MAN-03 | T-01-22 | токен бота не покидает VM | manual (checkpoint:human-action) | проверка агентом: `ssh ... "grep -cE '^Bot__TelegramToken=...' ~/finance-bot/.env"` | ✅ | ✅ manual 2026-11-17 |
+| 1-06-02 | 06 | 5 | FND-02, ING-03, MAN-03, PRIV-03 | T-01-23, T-01-24, T-01-25, T-01-26 | HTTPS с доверенным сертификатом, 401, 5432 закрыт, логи прода чистые, возврат после reboot | remote smoke + UAT | `curl -fsS https://SUBDOMAIN.duckdns.org/health` и проверки из плана; human-check: реальная оплата | ✅ | ✅ manual 2026-11-17 (01-06-SUMMARY) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -63,13 +63,13 @@ created: "2026-11-16"
 
 ## Wave 0 Requirements
 
-- [ ] `.gitignore` со строкой `.env` — шаг 0 трассера 01-01 (до любого другого файла)
-- [ ] `global.json`, `Directory.Packages.props`, `FinanceBot.slnx`, `.config/dotnet-tools.json` — трассер 01-01
-- [ ] `tests/FinanceBot.Tests/FinanceBot.Tests.csproj` (xunit.v3, Mvc.Testing 10.0.15, Testcontainers.PostgreSql, NSubstitute, OutputType Exe) — трассер 01-01
-- [ ] `tests/FinanceBot.Tests/ApiFactory.cs` + коллекция `Api` — трассер 01-01
-- [ ] `tests/FinanceBot.Tests/CapturingSink.cs` — 01-03 задача 1
-- [ ] `.github/workflows/ci.yml` — 01-03 задача 2
-- [ ] Локально: запущенный Docker Desktop для интеграционных тестов и smoke (предусловие задач 1-01-01, 1-01-02, 1-03-01, 1-04-01, 1-04-03)
+- [x] `.gitignore` со строкой `.env` — шаг 0 трассера 01-01 (до любого другого файла)
+- [x] `global.json`, `Directory.Packages.props`, `FinanceBot.slnx`, `.config/dotnet-tools.json` — трассер 01-01
+- [x] `tests/FinanceBot.Tests/FinanceBot.Tests.csproj` (xunit.v3, Mvc.Testing 10.0.15, Testcontainers.PostgreSql, NSubstitute, OutputType Exe) — трассер 01-01
+- [x] `tests/FinanceBot.Tests/ApiFactory.cs` + коллекция `Api` — трассер 01-01
+- [x] `tests/FinanceBot.Tests/CapturingSink.cs` — 01-03 задача 1
+- [x] `.github/workflows/ci.yml` — 01-03 задача 2
+- [x] Локально: запущенный Docker Desktop для интеграционных тестов и smoke (предусловие задач 1-01-01, 1-01-02, 1-03-01, 1-04-01, 1-04-03)
 
 ---
 
@@ -81,6 +81,8 @@ created: "2026-11-16"
 | PAYG защищает от отбора простаивающих VM | FND-02 (SC-1) | официальной документации нет, только письмо Oracle 2023 (backstop-truth) | 01-05 задача 1: решение пользователя по формулировке |
 | Реальная оплата Apple Pay → сообщение в Telegram с остатком | ING-03, MAN-03 (цель фазы) | нужен iPhone и настоящая оплата | 01-06 задача 2, human-check: оплатить, проверить две строки D-01 и строку в БД |
 | «Трата не сохранена» на iPhone при ошибке | D-09 | поведение Команд известно только на устройстве (RESEARCH A8) | 01-06 задача 2, human-check: временно испортить токен в Команде |
+| Oracle VM, Caddy TLS, DuckDNS, порты только у caddy, 5432 закрыт, переживает reboot | FND-02 | инфраструктура на VM | проверено вручную 2026-11-17, см. 01-06-SUMMARY.md |
+| Команда iOS + реальная оплата Apple Pay | ING-03, MAN-03 | нужен iPhone | проверено вручную 2026-11-17 (первая реальная оплата), см. 01-06-SUMMARY.md |
 | CI зелёный на GitHub | FND-05, SC-5 | нужен пуш и PR (только с разрешения пользователя) | 01-03 задача 2 / 01-06 задача 2, human-check: `gh run list --workflow ci.yml --limit 1` = success |
 
 ---
@@ -91,7 +93,15 @@ created: "2026-11-16"
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify (максимум две подряд: 1-05-01, 1-05-02)
 - [x] Wave 0 covers all MISSING references
 - [x] No watch-mode flags
-- [ ] Feedback latency < 60s (проверяется при исполнении)
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] Feedback latency < 60s (проверяется при исполнении)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** {pending / approved YYYY-MM-DD}
+**Approval:** approved 2026-11-17
+
+## Validation Audit 2026-11-17
+
+| Metric | Count |
+|---|---|
+| Gaps found | 2 |
+| Resolved | 2 |
+| Escalated | 0 |

@@ -11,7 +11,10 @@ public static class Parsing
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         // shortcut: temporary parser until the SPIKE-01 corpus; full version (ING-04, ING-09) in Phase 3
-        if (raw.IndexOfAny(['€', '$', '£']) >= 0 || raw.Contains("EUR") || raw.Contains("USD") || raw.Contains("GBP"))
+        raw = raw.Replace('−', '-').Replace('–', '-');   // typographic minus/dash: a refund, not a purchase
+        // Allow-list, not block-list: anything besides "zł"/"PLN" is a foreign currency (Kč, CHF, €...)
+        var unit = new string(raw.Where(c => !char.IsDigit(c) && !char.IsWhiteSpace(c) && c is not (',' or '.' or '-')).ToArray());
+        if (unit.Length > 0 && !unit.Equals("zł", StringComparison.OrdinalIgnoreCase) && !unit.Equals("PLN", StringComparison.OrdinalIgnoreCase))
             return null;
         var s = new string(raw.Where(c => char.IsDigit(c) || c is ',' or '.' or '-').ToArray());
         int sep = s.LastIndexOfAny([',', '.']);

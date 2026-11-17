@@ -33,6 +33,10 @@ public class ParsingTests
     [InlineData("5,00 EUR")]
     [InlineData("USD 5.00")]
     [InlineData("5 GBP")]
+    [InlineData("−23,50 zł")]   // typographic minus
+    [InlineData("–23,50 zł")]   // en dash
+    [InlineData("125,00 Kč")]
+    [InlineData("12,00 CHF")]
     public void Amount_ReturnsNullForInvalidOrForeign(string? raw) =>
         Assert.Null(Parsing.Amount(raw));
 

@@ -34,18 +34,18 @@ static class Ingest
         db.Transactions.Add(tx);
         await db.SaveChangesAsync();
 
-        decimal spent = 0;
-        if (tx.Amount is not null)   // unparsed amount: not part of the limit, no sum needed
-        {
-            // Week of the purchase, not of the arrival: a late payment still lands in its own week
-            var (start, end) = Week.Containing(tx.OccurredAt);
-            spent = await db.Transactions
-                .Where(t => t.UserId == tx.UserId && t.Amount != null && t.OccurredAt >= start && t.OccurredAt < end)
-                .SumAsync(t => t.Amount) ?? 0m;
-        }
-
         try
         {
+            decimal spent = 0;
+            if (tx.Amount is not null)   // unparsed amount: not part of the limit, no sum needed
+            {
+                // Week of the purchase, not of the arrival: a late payment still lands in its own week
+                var (start, end) = Week.Containing(tx.OccurredAt);
+                spent = await db.Transactions
+                    .Where(t => t.UserId == tx.UserId && t.Amount != null && t.OccurredAt >= start && t.OccurredAt < end)
+                    .SumAsync(t => t.Amount) ?? 0m;
+            }
+
             // Own timeout, not RequestAborted: the send must finish even if the phone disconnects
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await bot.SendMessage(opt.Value.OwnerChatId, Messages.Confirmation(tx, spent),
@@ -59,7 +59,7 @@ static class Ingest
     }
 
     // SHA-256 equalises lengths, so FixedTimeEquals leaks neither content nor token length
-    static bool TokenMatches(string header, string expected)
+    internal static bool TokenMatches(string header, string expected)
     {
         const string prefix = "Bearer ";
         if (!header.StartsWith(prefix, StringComparison.Ordinal)) return false;

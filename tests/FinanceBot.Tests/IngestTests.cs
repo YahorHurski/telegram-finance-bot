@@ -202,4 +202,44 @@ public sealed class IngestTests(ApiFactory f)
 
         Assert.Equal(HttpStatusCode.Created, await Send(Body("T2-RATE-LIMIT", "17.02.2026 12:00:00"), "Bearer " + ApiFactory.IngestToken));
     }
+
+    [Fact]
+    public async Task Owner_Over30RequestsPerMinute_Gets429()
+    {
+        // Own host = own limiter state, so the exhausted owner budget doesn't leak into other tests
+        using var client = f.WithWebHostBuilder(_ => { }).CreateClient();
+        var ct = TestContext.Current.CancellationToken;
+        var codes = new List<HttpStatusCode>();
+        for (int i = 0; i < 31; i++)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+                { Content = new StringContent("not json", Encoding.UTF8, "application/json") };
+            req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + ApiFactory.IngestToken);
+            codes.Add((await client.SendAsync(req, ct)).StatusCode);
+        }
+
+        Assert.All(codes.Take(30), c => Assert.Equal(HttpStatusCode.Created, c));
+        Assert.Equal(HttpStatusCode.TooManyRequests, codes[30]);
+    }
+
+    [Fact]
+    public async Task BodyOver64KB_IsRejectedAndNotSaved()
+    {
+        var merchant = "T-BIG-" + Guid.NewGuid();
+        var body = $$"""{"amount":"1 zł","merchant":"{{merchant}}","pad":"{{new string('x', 65 * 1024)}}"}""";
+
+        // Real Kestrel: TestServer ignores Kestrel's MaxRequestBodySize
+        using var kestrel = f.WithWebHostBuilder(_ => { });
+        kestrel.UseKestrel(0);
+        kestrel.StartServer();
+        var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+            { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+        req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + ApiFactory.IngestToken);
+        var res = await kestrel.CreateClient().SendAsync(req, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, res.StatusCode);
+        await using var scope = f.Services.CreateAsyncScope();
+        Assert.False(await scope.ServiceProvider.GetRequiredService<AppDb>().Transactions
+            .AnyAsync(t => t.Merchant == merchant, TestContext.Current.CancellationToken));
+    }
 }

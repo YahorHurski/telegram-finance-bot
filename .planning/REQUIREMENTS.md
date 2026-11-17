@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation & Delivery
 
 - [ ] **FND-01**: Решение из 5 проектов (Domain, Application, Infrastructure, Telegram, Api) + тестовые проекты; архитектурные тесты проверяют направление зависимостей
-- [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy; migrator как отдельный сервис перенесён в Phase 2 по D-13, в Phase 1 миграции идут через `docker compose run --rm app migrate`) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен), настроен бюджетный алерт
+- [x] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy; migrator как отдельный сервис перенесён в Phase 2 по D-13, в Phase 1 миграции идут через `docker compose run --rm app migrate`) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен), настроен бюджетный алерт
 - [ ] **FND-03**: CI (GitHub Actions) собирает, прогоняет тесты (включая интеграционные с реальным PostgreSQL) и деплоит при пуше в main
 - [ ] **FND-04**: Миграции БД применяются отдельным одноразовым шагом (EF migration bundle) при деплое
 - [x] **FND-05**: Секреты не попадают в репозиторий (gitleaks в CI, .gitignore с первого коммита)
@@ -37,7 +37,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **ING-01**: Пользователь получает ссылку на готовую iOS-Команду и инструкцию на русском по настройке автоматизации (запуск без подтверждения)
 - [ ] **ING-02**: После настройки пользователь может сделать тестовую отправку и получить от бота подтверждение, что связка работает
-- [ ] **ING-03**: При оплате Apple Pay трата (сумма, продавец, карта, время) автоматически сохраняется на сервере через HTTPS-эндпоинт с аутентификацией по токену
+- [x] **ING-03**: При оплате Apple Pay трата (сумма, продавец, карта, время) автоматически сохраняется на сервере через HTTPS-эндпоинт с аутентификацией по токену
 - [ ] **ING-04**: Суммы в локализованном формате (`1 234,56 zł`, неразрывные пробелы, запятая) распознаются корректно; исходная строка сохраняется
 - [ ] **ING-05**: Команда при сбое повторяет отправку (2–3 попытки) с тем же ключом идемпотентности; повторная отправка той же транзакции не создаёт дубль
 - [ ] **ING-06**: Почти одинаковая трата (та же сумма, продавец, карта в пределах ~2 мин) не теряется и явно помечается как возможный дубль. Поведение по умолчанию выбирается по данным спайка (SPIKE-01): либо дубль скрыт и не идёт в лимит, а кнопка «Это была отдельная покупка» возвращает его, либо трата засчитана и бот спрашивает «Похоже на дубль, удалить?»
@@ -49,7 +49,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **MAN-01**: Пользователь вносит трату сообщением: `45 такси` или `такси 45`
 - [ ] **MAN-02**: Суффикс `!` (`320 куртка !`) сохраняет трату вне лимита
-- [ ] **MAN-03**: После каждой траты (авто или ручной) бот присылает подтверждение: сумма, продавец, категория, остаток недельного лимита
+- [x] **MAN-03**: После каждой траты (авто или ручной) бот присылает подтверждение: сумма, продавец, категория, остаток недельного лимита
 - [ ] **MAN-04**: Под подтверждением — кнопки: сменить категорию, «Не в лимит» / «Вернуть в лимит», изменить, удалить
 - [ ] **MAN-05**: Пользователь может изменить сумму или дату траты
 - [ ] **MAN-06**: Удаление траты можно отменить (undo); сообщение обновляется на месте
@@ -163,7 +163,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPIKE-01 | Phase 3 | Pending |
 | SPIKE-02 | Phase 3 | Pending |
 | FND-01 | Phase 2 | Pending |
-| FND-02 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 2 | Pending |
 | FND-04 | Phase 2 | Pending |
 | FND-05 | Phase 1 | Complete |
@@ -177,7 +177,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACC-07 | Phase 3 | Pending |
 | ING-01 | Phase 3 | Pending |
 | ING-02 | Phase 3 | Pending |
-| ING-03 | Phase 3 | Pending |
+| ING-03 | Phase 3 | Complete |
 | ING-04 | Phase 3 | Pending |
 | ING-05 | Phase 3 | Pending |
 | ING-06 | Phase 3 | Pending |
@@ -186,7 +186,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ING-09 | Phase 3 | Pending |
 | MAN-01 | Phase 3 | Pending |
 | MAN-02 | Phase 3 | Pending |
-| MAN-03 | Phase 3 | Pending |
+| MAN-03 | Phase 3 | Complete |
 | MAN-04 | Phase 4 | Pending |
 | MAN-05 | Phase 4 | Pending |
 | MAN-06 | Phase 4 | Pending |

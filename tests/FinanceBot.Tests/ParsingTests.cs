@@ -41,13 +41,15 @@ public class ParsingTests
     [InlineData("29.03.2026 02:30:00", "2026-03-29T01:30:00Z")]   // DST gap: shifted forward by the gap
     [InlineData("25.10.2026 02:30:00", "2026-10-25T00:30:00Z")]   // repeated hour: the earlier one (CEST)
     [InlineData("  16.11.2026 14:03:05 ", "2026-11-16T13:03:05Z")]
+    [InlineData("16.11.2026, 14:03:05", "2026-11-16T13:03:05Z")]   // iOS "Date" variable, medium time
+    [InlineData("16.11.2026, 14:03", "2026-11-16T13:03:00Z")]      // iOS "Date" variable, short time
     public void Time_ReadsPhoneTimeAsWarsaw(string raw, string expectedUtc) =>
         Assert.Equal(InstantPattern.ExtendedIso.Parse(expectedUtc).Value, Parsing.Time(raw));
 
     [Theory]
     [InlineData(null)]
     [InlineData("garbage")]
-    [InlineData("16.11.2026, 14:03")]
+    [InlineData("16.11.2026 14:03")]
     public void Time_ReturnsNullForUnknownFormat(string? raw) =>
         Assert.Null(Parsing.Time(raw));
 }

@@ -22,14 +22,24 @@ public static class Parsing
                                 CultureInfo.InvariantCulture, out var v) && v > 0 && v < 1_000_000 ? v : null;
     }
 
-    static readonly LocalDateTimePattern TimePattern =
-        LocalDateTimePattern.CreateWithInvariantCulture("dd'.'MM'.'uuuu HH':'mm':'ss");
+    // Custom "Format Date" output, plus the iOS ru-locale date+time of the raw "Date" variable
+    // ("Короткий" date with "Средний"/"Короткий" time: "15.09.2026, 09:41:00" / "15.09.2026, 09:41").
+    static readonly LocalDateTimePattern[] TimePatterns =
+    [
+        LocalDateTimePattern.CreateWithInvariantCulture("dd'.'MM'.'uuuu HH':'mm':'ss"),
+        LocalDateTimePattern.CreateWithInvariantCulture("dd'.'MM'.'uuuu', 'HH':'mm':'ss"),
+        LocalDateTimePattern.CreateWithInvariantCulture("dd'.'MM'.'uuuu', 'HH':'mm"),
+    ];
 
     // Phone local time, read as Europe/Warsaw (D-08). DST gap/overlap resolved leniently.
     public static Instant? Time(string? raw)
     {
         if (raw is null) return null;
-        var r = TimePattern.Parse(raw.Trim());
-        return r.Success ? Week.Warsaw.AtLeniently(r.Value).ToInstant() : null;
+        foreach (var p in TimePatterns)
+        {
+            var r = p.Parse(raw.Trim());
+            if (r.Success) return Week.Warsaw.AtLeniently(r.Value).ToInstant();
+        }
+        return null;
     }
 }

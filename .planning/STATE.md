@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-11-16T21:29:19.675Z"
+stopped_at: Completed 01-05-PLAN.md (VM готова, PAYG отложен)
+last_updated: "2026-11-17T01:11:41.935Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 01 execution started
-state_head: 08c7958f34005645f3b95725ff8438eef2541826
+state_head: 9ecfa135fe47b3d70fccf95162464007fb1550e3
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 01 (Ходячий скелет) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-11-16 — Phase 01 execution started
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 3 min | 2 tasks | 4 files |
 | Phase 01 P03 | 4 min | 2 tasks | 8 files |
 | Phase 01 P04 | 18 min | 3 tasks | 13 files |
+| Phase 01 P05 | 3 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-04: Connection string carries Gss Encryption Mode=Disable (aspnet:10.0 has no libgssapi; Npgsql probe printed an error on every start)
 - [Phase 01]: 01-04: Runtime image is full aspnet:10.0 (noble), not chiseled; migrations via docker compose run --rm app migrate with the same image
 - [Phase 01]: 01-04: arm64 under QEMU is no evidence for .NET (runtime crashes even without ScottPlot); SkiaSharp arm64 proof is the native spike run on the VM in 01-06
+- [Phase 01]: SC-1/FND-02 закрыты формулировкой option-a: письмо Oracle 2023 принято как доказательство защиты PAYG от отбора; риск закрыт Docker и бэкапами вне Oracle
 
 ### Pending Todos
 
@@ -102,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 1]: Oracle Always Free может забрать простаивающую VM (reclamation) или заблокировать аккаунт; перед деплоем проверить по документации Oracle, что на Pay As You Go отбор не действует. Ampere A1 — это ARM64 (нужны arm64-образы и проверка нативных библиотек SkiaSharp)
 - [Phase 5]: Open Decisions из REQUIREMENTS.md нужно закрыть через `/gsd-discuss-phase 5` до планирования
 - [Phase 3]: Поведение дублей по умолчанию (ING-06) нужно выбрать по данным спайка до планирования фазы
+- PAYG upgrade pending — must be done within days, otherwise Oracle may stop the idle VM (7-day idle rule). Пользователь отложил перевод на Pay As You Go (авторизация ~400 zł); FND-02 PAYG-часть не выполнена
 
 ### Quick Tasks Completed
 
@@ -121,6 +124,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-16T21:29:19.615Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-11-17T01:11:41.887Z
+Stopped at: Completed 01-05-PLAN.md (VM готова, PAYG отложен)
 Resume file: None

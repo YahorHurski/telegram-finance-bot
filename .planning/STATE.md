@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ходячий скелет
-status: executing
-stopped_at: Completed 01-05-PLAN.md (VM готова, PAYG отложен)
-last_updated: "2026-11-17T01:11:41.935Z"
+status: verifying
+stopped_at: Completed 01-06-PLAN.md (prod live, real Apple Pay payment confirmed)
+last_updated: "2026-11-17T11:17:03.053Z"
 last_activity: 2026-11-16
 last_activity_desc: Phase 01 execution started
-state_head: 9ecfa135fe47b3d70fccf95162464007fb1550e3
+state_head: 0a84a5a6409e32f99cf43fb0c00e1fe7f75d1fba
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 Phase: 01 (Ходячий скелет) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-16 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P03 | 4 min | 2 tasks | 8 files |
 | Phase 01 P04 | 18 min | 3 tasks | 13 files |
 | Phase 01 P05 | 3 min | 3 tasks | 2 files |
+| Phase 01 P06 | ~10h calendar | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,15 +94,21 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-04: Runtime image is full aspnet:10.0 (noble), not chiseled; migrations via docker compose run --rm app migrate with the same image
 - [Phase 01]: 01-04: arm64 under QEMU is no evidence for .NET (runtime crashes even without ScottPlot); SkiaSharp arm64 proof is the native spike run on the VM in 01-06
 - [Phase 01]: SC-1/FND-02 закрыты формулировкой option-a: письмо Oracle 2023 принято как доказательство защиты PAYG от отбора; риск закрыт Docker и бэкапами вне Oracle
+- [Phase 01]: 01-06: Базовый образ для Phase 6 — aspnet:10.0 (noble): SkiaSharp нативно на arm64 VM отрисовал PNG 8260 байт
+- [Phase 01]: 01-06: Команда шлёт сырую переменную «Дата»; сервер принимает оба русских формата iOS, невалидная дата → время получения; Сумма и Карта оборачиваются в «Текст»
+- [Phase 01]: 01-06: 4 пустые записи от ручных запусков Команды (amount null) оставлены в проде, в лимит не идут
 
 ### Pending Todos
+
+- Перевести аккаунт Oracle на Pay As You Go (FND-02 закрыт не полностью; без PAYG простаивающую VM могут остановить по правилу 7 дней). Шаги — 01-05-SUMMARY, «User Setup Required»
+- Зелёный CI на PR в main (Phase 1 SC-5) проверить при `/gsd-ship`
 
 - После появления полного CI (Phase 2): дополнить GitHub ruleset "Protect main" правилами required status checks (+ решить про require pull request). Сейчас активны только deletion и non_fast_forward.
 
 ### Blockers/Concerns
 
 - [Phase 3]: Поведение iOS-автоматизации «Транзакция» не документировано Apple; редкие случаи (возврат, валюта, авиарежим) могут не воспроизвестись быстро, поэтому их нужно явно помечать и выбирать для них политику
-- [Phase 1]: Oracle Always Free может забрать простаивающую VM (reclamation) или заблокировать аккаунт; перед деплоем проверить по документации Oracle, что на Pay As You Go отбор не действует. Ampere A1 — это ARM64 (нужны arm64-образы и проверка нативных библиотек SkiaSharp)
+- [Phase 1]: Oracle Always Free может забрать простаивающую VM (reclamation) или заблокировать аккаунт; перед деплоем проверить по документации Oracle, что на Pay As You Go отбор не действует. Ampere A1 — это ARM64 (SkiaSharp на arm64 проверен нативно в 01-06: PNG рисуется)
 - [Phase 5]: Open Decisions из REQUIREMENTS.md нужно закрыть через `/gsd-discuss-phase 5` до планирования
 - [Phase 3]: Поведение дублей по умолчанию (ING-06) нужно выбрать по данным спайка до планирования фазы
 - PAYG upgrade pending — must be done within days, otherwise Oracle may stop the idle VM (7-day idle rule). Пользователь отложил перевод на Pay As You Go (авторизация ~400 zł); FND-02 PAYG-часть не выполнена
@@ -124,6 +131,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-17T01:11:41.887Z
-Stopped at: Completed 01-05-PLAN.md (VM готова, PAYG отложен)
+Last session: 2026-11-17T11:16:50.012Z
+Stopped at: Completed 01-06-PLAN.md (prod live, real Apple Pay payment confirmed)
 Resume file: None

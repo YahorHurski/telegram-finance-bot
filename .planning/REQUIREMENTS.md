@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation & Delivery
 
 - [ ] **FND-01**: Решение из 5 проектов (Domain, Application, Infrastructure, Telegram, Api) + тестовые проекты; архитектурные тесты проверяют направление зависимостей
-- [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен), настроен бюджетный алерт
+- [ ] **FND-02**: Сервис развёрнут бесплатно на Oracle Cloud Always Free VM через Docker Compose (app, migrator, postgres, caddy; migrator как отдельный сервис перенесён в Phase 2 по D-13, в Phase 1 миграции идут через `docker compose run --rm app migrate`) и доступен по HTTPS на поддомене (DuckDNS); `/health` отвечает. Аккаунт Oracle переведён на Pay As You Go (проверено по доступным источникам: документация Oracle правило отбора для PAYG не описывает, письмо Oracle 2023 называет PAYG способом избежать остановки; риск смягчён Docker и бэкапами вне Oracle (Phase 2); на 2026-11-17 сам перевод на PAYG отложен пользователем и ещё не выполнен), настроен бюджетный алерт
 - [ ] **FND-03**: CI (GitHub Actions) собирает, прогоняет тесты (включая интеграционные с реальным PostgreSQL) и деплоит при пуше в main
 - [ ] **FND-04**: Миграции БД применяются отдельным одноразовым шагом (EF migration bundle) при деплое
 - [x] **FND-05**: Секреты не попадают в репозиторий (gitleaks в CI, .gitignore с первого коммита)
@@ -92,7 +92,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **PRIV-01**: `/privacy` объясняет, какие данные хранятся и зачем
 - [ ] **PRIV-02**: `/deleteme` удаляет все данные пользователя после подтверждения
-- [ ] **PRIV-03**: Логи не содержат сумм, продавцов и токенов — с первого деплоя; проверяется автотестом
+- [x] **PRIV-03**: Логи не содержат сумм, продавцов и токенов — с первого деплоя; проверяется автотестом
 
 ### Portfolio
 
@@ -211,7 +211,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HLTH-01 | Phase 6 | Pending |
 | PRIV-01 | Phase 7 | Pending |
 | PRIV-02 | Phase 7 | Pending |
-| PRIV-03 | Phase 1 | Pending |
+| PRIV-03 | Phase 1 | Complete |
 | PORT-01 | Phase 7 | Pending |
 
 **Coverage:**

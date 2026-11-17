@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using NodaTime;
 using NodaTime.Text;
 
@@ -31,15 +32,32 @@ public static class Parsing
         LocalDateTimePattern.CreateWithInvariantCulture("dd'.'MM'.'uuuu', 'HH':'mm"),
     ];
 
+    // iOS ru-locale "Средний" date: "17 нояб. 2026 г., 12:03" (iOS puts NBSP/narrow NBSP between parts)
+    static readonly Regex RuMediumDate = new(
+        @"^(\d{1,2}) (\p{L}{3})\p{L}*\.? (\d{4}) г\.?, (\d{1,2}):(\d{2})(?::(\d{2}))?$", RegexOptions.CultureInvariant);
+    static readonly string[] RuMonths = ["янв", "фев", "мар", "апр", "ма", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
     // Phone local time, read as Europe/Warsaw (D-08). DST gap/overlap resolved leniently.
     public static Instant? Time(string? raw)
     {
         if (raw is null) return null;
+        var s = raw.Replace(' ', ' ').Replace(' ', ' ').Trim();
         foreach (var p in TimePatterns)
         {
-            var r = p.Parse(raw.Trim());
+            var r = p.Parse(s);
             if (r.Success) return Week.Warsaw.AtLeniently(r.Value).ToInstant();
         }
-        return null;
+        var m = RuMediumDate.Match(s);
+        if (!m.Success) return null;
+        int month = Array.FindIndex(RuMonths, x => m.Groups[2].Value.ToLowerInvariant().StartsWith(x)) + 1;
+        if (month == 0) return null;
+        try
+        {
+            var local = new LocalDateTime(int.Parse(m.Groups[3].Value), month, int.Parse(m.Groups[1].Value),
+                int.Parse(m.Groups[4].Value), int.Parse(m.Groups[5].Value),
+                m.Groups[6].Success ? int.Parse(m.Groups[6].Value) : 0);
+            return Week.Warsaw.AtLeniently(local).ToInstant();
+        }
+        catch (ArgumentOutOfRangeException) { return null; }   // "31 февр." and the like
     }
 }

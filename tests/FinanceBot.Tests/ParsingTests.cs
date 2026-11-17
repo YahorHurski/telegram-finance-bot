@@ -43,6 +43,9 @@ public class ParsingTests
     [InlineData("  16.11.2026 14:03:05 ", "2026-11-16T13:03:05Z")]
     [InlineData("16.11.2026, 14:03:05", "2026-11-16T13:03:05Z")]   // iOS "Date" variable, medium time
     [InlineData("16.11.2026, 14:03", "2026-11-16T13:03:00Z")]      // iOS "Date" variable, short time
+    [InlineData("17 нояб. 2026 г., 12:03", "2026-11-17T11:03:00Z")]   // iOS "Date", medium date
+    [InlineData("17 нояб. 2026 г., 12:03:07", "2026-11-17T11:03:07Z")]
+    [InlineData("5 мая 2026 г., 09:15", "2026-05-05T07:15:00Z")]
     public void Time_ReadsPhoneTimeAsWarsaw(string raw, string expectedUtc) =>
         Assert.Equal(InstantPattern.ExtendedIso.Parse(expectedUtc).Value, Parsing.Time(raw));
 
@@ -50,6 +53,8 @@ public class ParsingTests
     [InlineData(null)]
     [InlineData("garbage")]
     [InlineData("16.11.2026 14:03")]
+    [InlineData("31 февр. 2026 г., 12:03")]
+    [InlineData("17 xyz. 2026 г., 12:03")]
     public void Time_ReturnsNullForUnknownFormat(string? raw) =>
         Assert.Null(Parsing.Time(raw));
 }

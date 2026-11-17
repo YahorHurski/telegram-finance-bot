@@ -1,0 +1,58 @@
+name: restore-check
+
+# Weekly proof that the newest backup can actually be restored (D-10).
+# The repository is public and so are these logs: the job prints only OK or "FAIL: <reason>".
+# No `set -x`, no `-v` for rclone, no query results and no pg_restore stderr (it can quote row data).
+# GitHub disables scheduled workflows after 60 days without repository activity:
+# if that happens, re-enable it in Actions -> restore-check.
+
+on:
+  schedule:
+    - cron: "41 6 * * 1"   # Monday 06:41 UTC; not on the hour, where scheduled runs are delayed or dropped
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: backup-check   # B2 read-only key + private age key; the environment only allows main
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: sudo apt-get update -q && sudo apt-get install -y -q age rclone
+
+      - name: Restore the newest backup into a clean Postgres 18 and check it (prints only OK/FAIL)
+        shell: bash   # explicit shell = -eo pipefail; the implicit default is only `bash -e`
+        env:
+          RCLONE_CONFIG_B2_TYPE: b2
+          RCLONE_CONFIG_B2_ACCOUNT: ${{ secrets.B2_READ_KEY_ID }}
+          RCLONE_CONFIG_B2_KEY: ${{ secrets.B2_READ_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
+        run: |
+          umask 077
+          export AGE_KEY_FILE="$RUNNER_TEMP/age.key"
+          printf '%s\n' "$AGE_KEY" > "$AGE_KEY_FILE"
+          docker run -d --name pg -e POSTGRES_USER=financebot -e POSTGRES_DB=financebot \
+            -e POSTGRES_PASSWORD="$(openssl rand -hex 16)" postgres:18-alpine >/dev/null
+          until docker exec pg pg_isready -U financebot -d financebot -q; do sleep 1; done
+
+          newest=$(rclone lsf --files-only --include 'financebot-*.dump.age' "b2:$B2_BUCKET" 2>/dev/null | sort | tail -n 1) \
+            || { echo "FAIL: cannot list bucket"; exit 1; }
+          [[ -n "$newest" ]] || { echo "FAIL: no backups"; exit 1; }
+          # Freshness catches a cron that silently stopped: the Telegram alert only fires when the script runs
+          ts=$(sed -E 's/^financebot-([0-9]{8})T([0-9]{2})([0-9]{2})([0-9]{2})Z.*/\1 \2:\3:\4/' <<<"$newest")
+          (( $(date -u +%s) - $(date -u -d "$ts" +%s) < 48*3600 )) || { echo "FAIL: newest backup older than 48h"; exit 1; }
+
+          scripts/restore.sh pg "$newest" >/dev/null 2>&1 || { echo "FAIL: restore"; exit 1; }
+
+          q() { docker exec pg psql -U financebot -d financebot -tAc "$1" 2>/dev/null; }
+          [[ $(q "select count(*) > 0 from transactions") == t ]] || { echo "FAIL: no transactions"; exit 1; }
+          # The migration must exist in the repo, not be the latest one: a pre-deploy backup
+          # or a merged but not yet deployed PR would otherwise give a false red
+          mig=$(q 'select max("MigrationId") from "__EFMigrationsHistory"')
+          [[ -n "$mig" ]] && ls src/*/Migrations/"$mig".cs >/dev/null 2>&1 || { echo "FAIL: unknown migration in backup"; exit 1; }
+          echo OK

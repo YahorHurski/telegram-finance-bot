@@ -132,7 +132,67 @@ docker compose ps                                       # app, postgres, caddy �
 docker compose logs app | tail -20                      # нет сумм, продавцов и токенов
 ```
 
-## 12. Риски
+## 12. Бэкапы
+
+Каждую ночь в 02:17 UTC cron на VM запускает `scripts/backup.sh`: `pg_dump` внутри контейнера postgres → шифрование `age` публичным ключом → загрузка в приватный бакет Backblaze B2 (вне Oracle). Имя файла: `financebot-<дата и время UTC>.dump.age`. Лог: `~/backup.log`.
+
+Почему так:
+- **age с публичным ключом.** На VM лежит только публичный ключ: им можно зашифровать, но нельзя расшифровать. Если VM взломают, старые бэкапы прочитать не получится.
+- **Ключ B2 на VM только Write Only.** VM может добавлять файлы, но не может их читать или удалять. Старые копии удаляет правило бакета, а не скрипт.
+- **Сначала дамп в файл, потом загрузка.** Если `pg_dump` упадёт на середине, в B2 не попадёт обрезанный файл под видом удачного бэкапа.
+
+### Настройка (один раз)
+
+1. **Бакет B2:** Buckets → Create a Bucket, Files in Bucket: **Private**. Lifecycle Settings → custom rule: префикс пустой, Days From Uploading To Hiding = **30**, Days From Hiding To Deleting = **7**. Почему 7: если кто-то спрячет файлы, еженедельная проверка восстановления покраснеет раньше, чем B2 удалит их окончательно.
+2. **Два ключа B2**, оба только на этот бакет (Application Keys → Add a New Application Key):
+   - `vm-backup`, **Write Only**: его keyID и applicationKey лежат только в `.env` на VM (`RCLONE_CONFIG_B2_ACCOUNT`, `RCLONE_CONFIG_B2_KEY`);
+   - `ci-restore-check`, **Read Only**: лежит в менеджере паролей и в секретах GitHub (`B2_READ_KEY_ID`, `B2_READ_KEY`).
+3. **Ключ age:** `age-keygen -o finbot-backup.key` на своём компьютере. Публичная часть (`age1...`) идёт в `.env` на VM (`BACKUP_AGE_RECIPIENT`). Весь файл ключа: в менеджер паролей и в секрет `BACKUP_AGE_KEY`. После этого файл с диска удалить. Без приватного ключа бэкапы не расшифровать никогда.
+4. **GitHub:** Settings → Environments → `backup-check` (без required reviewers, разрешена только ветка `main`), четыре секрета: `B2_READ_KEY_ID`, `B2_READ_KEY`, `B2_BUCKET`, `BACKUP_AGE_KEY`.
+5. **VM:**
+   ```bash
+   sudo apt-get install -y age rclone
+   # в ~/finance-bot/.env: BACKUP_AGE_RECIPIENT, B2_BUCKET, RCLONE_CONFIG_B2_ACCOUNT, RCLONE_CONFIG_B2_KEY (см. .env.example)
+   cd ~/finance-bot && ./scripts/backup.sh     # первый бэкап руками, без ошибок
+   crontab -e
+   # строка: 17 2 * * * /home/ubuntu/finance-bot/scripts/backup.sh >> /home/ubuntu/backup.log 2>&1
+   ```
+6. **UptimeRobot:** монитор HTTP(s) на `https://<поддомен>.duckdns.org/health`, интервал 5 минут, алерт на email. Он замечает и падение бота, и остановку самой VM.
+
+### Если бэкап не удался
+
+Скрипт присылает в Telegram «⚠️ Бэкап не удался (строка N)», без сумм и других данных. Номер строки указывает на шаг в `scripts/backup.sh`; подробности в `~/backup.log` на VM.
+
+### Проверка восстановления
+
+Каждый понедельник workflow `restore-check` восстанавливает новейший бэкап в чистый Postgres 18 и проверяет: бэкап моложе 48 часов, в `transactions` есть строки, миграция из бэкапа есть в репозитории. Лог публичный, поэтому печатается только `OK` или `FAIL: <причина>`.
+
+Запустить вручную: Actions → restore-check → Run workflow (ветка main). Ожидаемый вывод последнего шага: `OK`.
+
+Если больше двух месяцев не было коммитов, GitHub сам отключает плановые запуски: Actions → restore-check → Enable workflow.
+
+### Ручное восстановление при аварии
+
+На VM (или на новой машине с этим репозиторием и запущенным `docker compose`):
+
+1. Из менеджера паролей экспортировать в сессию ключ **чтения** и путь к приватному ключу. В `.env` их не записывать:
+   ```bash
+   export RCLONE_CONFIG_B2_ACCOUNT=<keyID ci-restore-check> RCLONE_CONFIG_B2_KEY=<applicationKey> B2_BUCKET=<бакет>
+   umask 077; nano /tmp/age.key          # вставить содержимое ключа age
+   export AGE_KEY_FILE=/tmp/age.key
+   ```
+2. Восстановить новейший бэкап (или указать имя файла вторым аргументом):
+   ```bash
+   cd ~/finance-bot
+   docker compose stop app
+   ./scripts/restore.sh "$(docker compose ps -q postgres)"
+   docker compose start app
+   ```
+3. Удалить ключ и закрыть сессию: `rm /tmp/age.key; exit`.
+
+`restore.sh` намеренно не читает `.env`: на VM нет ни ключа чтения, ни приватного ключа, их приносят только на время аварии.
+
+## 13. Риски
 
 - **Отбор простаивающих инстансов.** Oracle может остановить Always Free VM, если за 7 дней загрузка CPU, сети и памяти ниже 20 %. Бот почти всё время простаивает. Что даёт Pay As You Go, решается в плане 01-05; там же будет уточнена эта формулировка. Искусственную нагрузку против простоя не создавай.
-- **Страховка:** всё работает в Docker, поэтому переезд на другой сервер (например, Hetzner) не требует переделок. Бэкапы вне Oracle появятся в Phase 2.
+- **Страховка:** всё работает в Docker, поэтому переезд на другой сервер (например, Hetzner) не требует переделок. Шифрованные бэкапы лежат вне Oracle, в Backblaze B2 (раздел 12).

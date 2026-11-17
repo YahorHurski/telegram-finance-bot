@@ -182,4 +182,24 @@ public sealed class IngestTests(ApiFactory f)
         Assert.NotNull(row);
         Assert.Equal("T2-TELEGRAM-FAIL", row.Merchant);
     }
+
+    [Fact]
+    public async Task JunkTraffic_DoesNotStarveOwnerRateLimit()
+    {
+        // Own host = own limiter state, so the exhausted anonymous budget doesn't leak into other tests' 401 checks
+        using var client = f.WithWebHostBuilder(_ => { }).CreateClient();
+        var ct = TestContext.Current.CancellationToken;
+        async Task<HttpStatusCode> Send(string body, string auth)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+                { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+            req.Headers.TryAddWithoutValidation("Authorization", auth);
+            return (await client.SendAsync(req, ct)).StatusCode;
+        }
+
+        for (int i = 0; i < 30; i++) await Send("{}", "Bearer wrong");   // exhausts the anonymous budget
+        Assert.Equal(HttpStatusCode.TooManyRequests, await Send("{}", "Bearer wrong"));
+
+        Assert.Equal(HttpStatusCode.Created, await Send(Body("T2-RATE-LIMIT", "17.02.2026 12:00:00"), "Bearer " + ApiFactory.IngestToken));
+    }
 }

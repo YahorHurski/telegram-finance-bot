@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NodaTime;
@@ -35,7 +35,11 @@ builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.AddFixedWindowLimiter("ingest", w => { w.PermitLimit = 30; w.Window = TimeSpan.FromMinutes(1); });
+    // Separate budgets for the owner and for everyone else: junk 401 traffic must not starve real payments
+    o.AddPolicy("ingest", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        Ingest.TokenMatches(ctx.Request.Headers.Authorization.ToString(),
+            ctx.RequestServices.GetRequiredService<IOptions<BotOptions>>().Value.IngestToken) ? "owner" : "anon",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
 });
 builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 64 * 1024);
 

@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Secrets (FND-05)
 .env
+
+# Внутренние планы GSD и инструкции Claude: только локально
+.planning/
+.claude/

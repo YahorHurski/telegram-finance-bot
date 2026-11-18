@@ -1,12 +1,28 @@
+# TAG lives in .env and is written by deploy.sh: the commit SHA = the image tag in GHCR.
+# ${TAG:?} fails loudly instead of pulling a random tag.
 services:
-  app:
-    build: .
-    restart: unless-stopped
-    env_file: .env                     # Bot__IngestToken, Bot__TelegramToken, Bot__OwnerChatId
+  # shortcut: migrator and app use the same DB user financebot; a separate DDL user comes with multi-user (Phase 7)
+  migrator:
+    image: ghcr.io/yahorhurski/telegram-finance-bot-migrator:${TAG:?TAG is not set in .env}
+    restart: "no"                          # one-shot: never restarted after exit 0
     environment:
+      ASPNETCORE_ENVIRONMENT: Production   # EF bundles default to Development otherwise (appsettings.Development.json)
       ConnectionStrings__Default: Host=postgres;Database=financebot;Username=financebot;Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
     depends_on:
       postgres: { condition: service_healthy }
+
+  app:
+    image: ghcr.io/yahorhurski/telegram-finance-bot:${TAG:?TAG is not set in .env}
+    restart: unless-stopped
+    # Explicit list instead of the whole .env: the app does not need the B2 key and other backup variables
+    environment:
+      ConnectionStrings__Default: Host=postgres;Database=financebot;Username=financebot;Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+      Bot__IngestToken: ${Bot__IngestToken}
+      Bot__TelegramToken: ${Bot__TelegramToken}
+      Bot__OwnerChatId: ${Bot__OwnerChatId}
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrator: { condition: service_completed_successfully }
     # no ports: only Caddy talks to the app, inside the compose network
 
   postgres:

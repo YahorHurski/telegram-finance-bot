@@ -5,6 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; . ./.env; set +a   # BACKUP_AGE_RECIPIENT, B2_BUCKET, RCLONE_CONFIG_B2_ACCOUNT/KEY, Bot__TelegramToken, Bot__OwnerChatId
+# pg_dump runs in the postgres container, but compose substitutes ${TAG:?} across the whole file:
+# without this the nightly backup would fail on a VM where deploy.sh has not written TAG yet
+if [ -z "${TAG:-}" ]; then export TAG=unused; fi
 # The rclone remote "b2:" is defined purely by env vars, there is no rclone.conf
 export RCLONE_CONFIG_B2_TYPE=b2
 

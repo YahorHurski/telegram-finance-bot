@@ -20,7 +20,7 @@
 5. SSH keys: вставь содержимое `~/.ssh/id_ed25519.pub`.
 6. Create. Запиши публичный IP: он понадобится для DuckDNS и SSH (`ssh ubuntu@<IP>`).
 
-**Почему A1, а не x86 Micro:** образ приложения собирается прямо на VM. У E2.1.Micro 1 GB RAM, и сборки .NET рядом с Postgres на ней не хватит.
+**Почему A1, а не x86 Micro:** образы собирает CI, на VM их только скачивают. A1 выбран ради памяти под app + Postgres + Caddy: у E2.1.Micro всего 1 GB RAM.
 
 Если Oracle пишет **«Out of capacity»**, выбери другой availability domain или повтори попытку позже. Для A1 это обычная ситуация.
 
@@ -92,7 +92,7 @@ cd ~/finance-bot
 cp .env.example .env
 chmod 600 .env
 openssl rand -hex 32                    # выполни дважды: для POSTGRES_PASSWORD и для Bot__IngestToken
-nano .env                               # заполни все пять переменных
+nano .env                               # заполни пять переменных ниже; TAG оставь пустым, его пишет deploy.sh
 ```
 
 | Переменная | Значение |
@@ -112,23 +112,62 @@ Caddy начинает получать сертификат Let's Encrypt ср�
 
 1. **DNS:** `nslookup <поддомен>.duckdns.org` возвращает IP VM (шаг 5).
 2. **Порты:** оба уровня открыты (шаг 4). Проверка с ноутбука: `nc -vz <IP VM> 80` и `nc -vz <IP VM> 443`. Пока ничего не запущено, ответ «connection refused» — это нормально: значит, пакеты доходят до VM. Плохой знак — таймаут.
-3. **Запуск:** `./deploy.sh`
+3. **Бэкапы** настроены по разделу 12: `deploy.sh` делает бэкап перед миграцией и без него не продолжает.
+4. **Запуск:** `./deploy.sh <SHA последнего коммита main>` (полный SHA из 40 символов: вкладка Commits на GitHub или `git rev-parse origin/main`).
 
-`deploy.sh` делает: `git pull --ff-only` → сборка образа → миграции БД (`docker compose run --rm app migrate`) → `docker compose up -d` → проверка `https://<DOMAIN>/health`. В конце должно напечататься `Healthy OK`.
+На VM ничего не собирается: образы `ghcr.io/yahorhurski/telegram-finance-bot` и `...-migrator` с тегом = SHA собрал и проверил CI. В конце должно напечататься `deployed <sha>`.
 
-## 10. Обновление
+## 10. Обновление и откат
 
-```bash
-cd ~/finance-bot && ./deploy.sh
-```
+### Как устроен деплой
 
-После мержа ветки фазы в main переключи VM на main: `git checkout main`, затем `./deploy.sh`.
+`deploy.sh <sha>` по шагам:
+
+1. Проверяет, что SHA — ровно 40 hex-символов. Из SSH приходит недоверенная строка, поэтому это первое действие.
+2. `git checkout` этого SHA (detached HEAD) и `docker compose pull` образов app и migrator.
+3. `scripts/backup.sh`: внеочередной бэкап. Нет бэкапа — нет миграции.
+4. `docker compose run --rm migrator`: миграции отдельным одноразовым контейнером. Упал — работающая версия не трогается, checkout возвращается назад.
+5. `TAG=<sha>` в `.env`, `docker compose up -d`, проверка `https://<DOMAIN>/health`.
+6. Health не 200 — откат: предыдущий SHA в `.env` и `up -d` на старых образах. Job в Actions красный, GitHub присылает письмо.
+
+### Обычное обновление
+
+1. PR → проверки `build-test` и `image` зелёные → мерж в main.
+2. Actions → run `ci` на main ждёт подтверждения: **Review deployments** → `production` → **Approve**.
+3. Job `deploy` заходит на VM по SSH; ключ в `authorized_keys` разрешает только запуск `deploy.sh`, SHA приходит в `SSH_ORIGINAL_COMMAND`.
+
+Ненужный деплой (например, после мержа одной документации) можно отклонить кнопкой **Reject**: фильтровать пути в триггерах нельзя, иначе обязательная проверка PR перестанет отчитываться.
+
+### Ручной откат
+
+- На VM: `cd ~/finance-bot && ./deploy.sh <предыдущий SHA>`.
+- Или в Actions открыть старый успешный run `ci` и сделать **Re-run** job `deploy`: старые образы остаются в GHCR.
+
+Откат возвращает образ и `compose.yaml`, но не схему базы. Поэтому правило миграций ниже обязательно.
+
+### Первый автодеплой (переход с ручного деплоя фазы 1)
+
+У первого деплоя нет предыдущего SHA в `.env`, автоматического отката нет. На VM старый `deploy.sh` ещё собирает образ сам, поэтому переход делается один раз руками: `git fetch && git checkout --detach <sha>` и `./deploy.sh <sha>`. Если health не поднялся: `git checkout <коммит фазы 1>` и `docker compose up -d` — запустится старый локально собранный образ. После успешного перехода старый образ можно удалить: `docker image prune`.
+
+### Правило миграций (D-03)
+
+- **Только обратно совместимые изменения:** старая версия приложения должна работать на новой схеме. Колонку сначала добавляют (новый код начинает её писать), а убирают старое только в следующем релизе.
+- **Одна миграция на деплой.** В EF Core 10 каждая миграция идёт в своей транзакции: если из двух упадёт вторая, первая уже применена.
+
+Почему так: автоматический откат возвращает только образ, схема остаётся новой. Совместимая миграция делает откат безопасным, а при поломке данных остаётся бэкап, снятый прямо перед миграцией.
+
+### Что лежит на VM вне git
+
+- Строка cron для `scripts/backup.sh` (раздел 12).
+- Строка `~/.ssh/authorized_keys` для ключа деплоя: `restrict,command="/home/ubuntu/finance-bot/deploy.sh" ssh-ed25519 AAAA... github-deploy`. `restrict` запрещает проброс портов, агента и терминал, `command=` игнорирует команду клиента.
+- `~/finance-bot` стоит в detached HEAD на SHA последнего деплоя. Это ожидаемо: `git status` покажет `HEAD detached at <sha>`.
+- `.env` с секретами и `TAG`.
 
 ## 11. Проверка
 
 ```bash
 curl https://<поддомен>.duckdns.org/health            # Healthy
-docker compose ps                                       # app, postgres, caddy в статусе running
+docker compose ps                                       # app, postgres, caddy в статусе running (migrator завершён)
 docker compose logs app | tail -20                      # нет сумм, продавцов и токенов
 ```
 

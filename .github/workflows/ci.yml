@@ -27,6 +27,9 @@ jobs:
       - name: .env must stay ignored
         run: git check-ignore -q .env
 
+      - name: deploy.sh branches (rollback, stop on failed migrator) on stubs
+        run: bash scripts/deploy-test.sh
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json

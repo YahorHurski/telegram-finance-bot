@@ -144,14 +144,24 @@ docker compose logs app | tail -20                      # нет сумм, пр�
 ### Настройка (один раз)
 
 1. **Бакет B2:** Buckets → Create a Bucket, Files in Bucket: **Private**. Lifecycle Settings → custom rule: префикс пустой, Days From Uploading To Hiding = **30**, Days From Hiding To Deleting = **7**. Почему 7: если кто-то спрячет файлы, еженедельная проверка восстановления покраснеет раньше, чем B2 удалит их окончательно.
-2. **Два ключа B2**, оба только на этот бакет (Application Keys → Add a New Application Key):
-   - `vm-backup`, **Write Only**: его keyID и applicationKey лежат только в `.env` на VM (`RCLONE_CONFIG_B2_ACCOUNT`, `RCLONE_CONFIG_B2_KEY`);
-   - `ci-restore-check`, **Read Only**: лежит в менеджере паролей и в секретах GitHub (`B2_READ_KEY_ID`, `B2_READ_KEY`).
+2. **Два ключа B2**, оба только на этот бакет:
+   - `vm-backup-wo` для VM создаётся **через B2 CLI**, а не в веб-консоли: ключ «Write Only» из консоли вдобавок получает `deleteFiles` и права на lifecycle-правила бакета, то есть VM смогла бы удалить бэкапы. Нужны ровно два права:
+     ```bash
+     b2 key create --bucket <бакет> vm-backup-wo writeFiles,listBuckets
+     ```
+     keyID и applicationKey лежат только в `.env` на VM (`RCLONE_CONFIG_B2_ACCOUNT`, `RCLONE_CONFIG_B2_KEY`). Проверка на VM: `rclone rcat` пробного файла проходит, а `rclone cat` и `rclone deletefile --b2-hard-delete` того же файла падают;
+   - `ci-restore-check`, **Read Only** (Application Keys → Add a New Application Key): лежит в менеджере паролей и в секретах GitHub (`B2_READ_KEY_ID`, `B2_READ_KEY`).
 3. **Ключ age:** `age-keygen -o finbot-backup.key` на своём компьютере. Публичная часть (`age1...`) идёт в `.env` на VM (`BACKUP_AGE_RECIPIENT`). Весь файл ключа: в менеджер паролей и в секрет `BACKUP_AGE_KEY`. После этого файл с диска удалить. Без приватного ключа бэкапы не расшифровать никогда.
 4. **GitHub:** Settings → Environments → `backup-check` (без required reviewers, разрешена только ветка `main`), четыре секрета: `B2_READ_KEY_ID`, `B2_READ_KEY`, `B2_BUCKET`, `BACKUP_AGE_KEY`.
 5. **VM:**
    ```bash
-   sudo apt-get install -y age rclone
+   sudo apt-get install -y age
+   # rclone: не из apt. В Ubuntu 24.04 он 1.60 и входит в B2 через API v1, а ключ из CLI принимается только в API v4.
+   # Ставим .deb с GitHub-релиза (v1.76.0 или новее) с проверкой хэша; обновлять вручную тем же способом.
+   v=v1.76.0; base=https://github.com/rclone/rclone/releases/download/$v
+   curl -fsSLO "$base/rclone-$v-linux-arm64.deb" && curl -fsSLO "$base/SHA256SUMS"
+   sha256sum -c --ignore-missing SHA256SUMS     # должно быть: rclone-...deb: OK
+   sudo dpkg -i "rclone-$v-linux-arm64.deb" && sudo apt-mark hold rclone && rm "rclone-$v-linux-arm64.deb" SHA256SUMS
    # в ~/finance-bot/.env: BACKUP_AGE_RECIPIENT, B2_BUCKET, RCLONE_CONFIG_B2_ACCOUNT, RCLONE_CONFIG_B2_KEY (см. .env.example)
    cd ~/finance-bot && ./scripts/backup.sh     # первый бэкап руками, без ошибок
    crontab -e

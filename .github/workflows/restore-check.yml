@@ -68,6 +68,7 @@ jobs:
           [[ $(q "select count(*) > 0 from transactions") == t ]] || { echo "FAIL: no transactions"; exit 1; }
           # The migration must exist in the repo, not be the latest one: a pre-deploy backup
           # or a merged but not yet deployed PR would otherwise give a false red
-          mig=$(q 'select max("MigrationId") from "__EFMigrationsHistory"')
+          # snake_case naming convention renames the history columns too (migration_id, product_version)
+          mig=$(q 'select max(migration_id) from "__EFMigrationsHistory"') || { echo "FAIL: cannot read migration history"; exit 1; }
           ls src/*/Migrations/"${mig:-none}".cs >/dev/null 2>&1 || { echo "FAIL: unknown migration in backup"; exit 1; }
           echo OK

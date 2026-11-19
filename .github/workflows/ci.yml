@@ -27,8 +27,82 @@ jobs:
       - name: .env must stay ignored
         run: git check-ignore -q .env
 
+      - name: deploy.sh branches (rollback, stop on failed migrator) on stubs
+        run: bash scripts/deploy-test.sh
+
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
       - run: dotnet test
+
+  # Build once, deploy many (D-01): the arm64 images are built and smoke-tested here, the VM only pulls them
+  image:
+    needs: build-test
+    runs-on: ubuntu-24.04-arm   # native arm64 like the Oracle A1 VM: .NET does not run under QEMU
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write           # only this job may push to GHCR
+    env:
+      APP: ghcr.io/yahorhurski/telegram-finance-bot:${{ github.sha }}
+      MIGRATOR: ghcr.io/yahorhurski/telegram-finance-bot-migrator:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build migrator and app images
+        run: |
+          docker build --target migrator -t "$MIGRATOR" .
+          docker build --target app -t "$APP" .
+
+      # Catches a broken image before merge: the very first deploy has no automatic rollback
+      - name: Smoke - migrator twice on an empty Postgres 18, then app /health
+        run: |
+          docker network create t
+          docker run -d --name pg --network t -e POSTGRES_USER=financebot -e POSTGRES_DB=financebot \
+            -e POSTGRES_PASSWORD=smoke-only postgres:18-alpine
+          until docker exec pg pg_isready -U financebot -d financebot; do sleep 1; done
+          CS="Host=pg;Database=financebot;Username=financebot;Password=smoke-only;Gss Encryption Mode=Disable"
+          for i in 1 2; do
+            docker run --rm --network t -e ASPNETCORE_ENVIRONMENT=Production -e "ConnectionStrings__Default=$CS" "$MIGRATOR"
+          done
+          n=$(docker exec pg psql -U financebot -d financebot -tAc 'select count(*) from "__EFMigrationsHistory"')
+          [ "$n" = 1 ] || { echo "expected 1 migration in history, got $n"; exit 1; }
+          docker run -d --name app --network t -p 8080:8080 -e "ConnectionStrings__Default=$CS" \
+            -e Bot__IngestToken=smoke-ingest-token-that-is-at-least-32-chars \
+            -e Bot__TelegramToken=123:smoke-fake-token -e Bot__OwnerChatId=1 "$APP"
+          curl -fsS --retry 10 --retry-delay 2 --retry-all-errors http://localhost:8080/health | tee /dev/stderr | grep -qx Healthy
+
+      - name: Push to GHCR (main only)
+        if: github.event_name == 'push'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker push "$MIGRATOR"
+          docker push "$APP"
+
+  # Not a required check: it has an `if:` and is always skipped on PRs
+  deploy:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production     # required reviewer = the Approve button; its secrets open only after Approve
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      # Plain ssh, no third-party action: nobody else gets the private key.
+      # On the VM authorized_keys has `restrict,command=` → deploy.sh runs, the SHA arrives in SSH_ORIGINAL_COMMAND
+      - name: Deploy over SSH (forced command on the VM)
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "ubuntu@$HOST" "$GITHUB_SHA"

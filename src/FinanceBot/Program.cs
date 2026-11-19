@@ -18,7 +18,7 @@ builder.Services.AddSerilog((sp, lc) => lc
     .ReadFrom.Services(sp)   // tests plug in a capturing ILogEventSink here
     .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
-// Config is read inside DI factories, not at the top level: `dotnet ef` and the `migrate` branch run without secrets
+// Config is read inside DI factories, not at the top level: `dotnet ef` and the migration bundle run without secrets
 builder.Services.AddOptions<BotOptions>().BindConfiguration("Bot")
     .Validate(o => o.IngestToken.Length >= 32 && o.TelegramToken.Length > 0 && o.OwnerChatId != 0,
               "Bot__IngestToken (>=32), Bot__TelegramToken, Bot__OwnerChatId are required")
@@ -30,7 +30,8 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 // Own HttpClient, not IHttpClientFactory: factory logs print the request URL, which contains the bot token
 builder.Services.AddSingleton<ITelegramBotClient>(sp =>
     new TelegramBotClient(sp.GetRequiredService<IOptions<BotOptions>>().Value.TelegramToken));
-builder.Services.AddHealthChecks();
+// /health = 503 when Postgres is unreachable: the post-deploy rollback and UptimeRobot see a dead database, not only a dead process
+builder.Services.AddHealthChecks().AddDbContextCheck<AppDb>();
 // The ingest endpoint is public: cap request rate and body size (ASVS L1)
 builder.Services.AddRateLimiter(o =>
 {
@@ -44,13 +45,6 @@ builder.Services.AddRateLimiter(o =>
 builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 64 * 1024);
 
 var app = builder.Build();
-
-if (args is ["migrate"])  // docker compose run --rm app migrate
-{
-    await using var scope = app.Services.CreateAsyncScope();
-    await scope.ServiceProvider.GetRequiredService<AppDb>().Database.MigrateAsync();
-    return;
-}
 
 app.UseSerilogRequestLogging();   // one line per request: method, path, status, time; no body, no headers
 app.UseRateLimiter();

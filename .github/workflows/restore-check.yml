@@ -1,7 +1,8 @@
 name: restore-check
 
 # Weekly proof that the newest backup can actually be restored (D-10).
-# The repository is public and so are these logs: the job prints only OK or "FAIL: <reason>".
+# The repository is public and so are these logs: the job prints only OK or "FAIL: <reason>"
+# (plus rclone's own error when listing the bucket fails; Actions masks secret values in it anyway).
 # No `set -x`, no `-v` for rclone, no query results and no pg_restore stderr (it can quote row data).
 # GitHub disables scheduled workflows after 60 days without repository activity:
 # if that happens, re-enable it in Actions -> restore-check.
@@ -22,7 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - run: sudo apt-get update -q && sudo apt-get install -y -q age rclone
+      # rclone from the GitHub release, not apt: Ubuntu's 1.60.1 logs into B2 via API v1, as on the VM (02-01).
+      # Hash-only check against the release's SHA256SUMS; the PGP signature is checked on the VM, not here.
+      - name: Install age (apt) and rclone v1.76.0 (GitHub release, SHA256-checked)
+        shell: bash
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q age
+          v=v1.76.0; deb="rclone-$v-linux-amd64.deb"; base="https://github.com/rclone/rclone/releases/download/$v"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "$base/$deb" && curl -fsSLO "$base/SHA256SUMS"
+          grep " $deb\$" SHA256SUMS | sha256sum -c -
+          sudo dpkg -i "$deb" >/dev/null
+          rclone version | sed -n 1p
 
       - name: Restore the newest backup into a clean Postgres 18 and check it (prints only OK/FAIL)
         shell: bash   # explicit shell = -eo pipefail; the implicit default is only `bash -e`
@@ -40,8 +52,11 @@ jobs:
             -e POSTGRES_PASSWORD="$(openssl rand -hex 16)" postgres:18-alpine >/dev/null
           until docker exec pg pg_isready -U financebot -d financebot -q; do sleep 1; done
 
-          newest=$(rclone lsf --files-only --include 'financebot-*.dump.age' "b2:$B2_BUCKET" 2>/dev/null | sort | tail -n 1) \
-            || { echo "FAIL: cannot list bucket"; exit 1; }
+          # Keys stay in RCLONE_CONFIG_* env, never argv. rclone's error names no key and no rows, so show it
+          if ! listing=$(rclone lsf --files-only --include 'financebot-*.dump.age' "b2:$B2_BUCKET" 2>"$RUNNER_TEMP/lsf.err"); then
+            cat "$RUNNER_TEMP/lsf.err"; echo "FAIL: cannot list bucket"; exit 1
+          fi
+          newest=$(sort <<<"$listing" | tail -n 1)
           [[ -n "$newest" ]] || { echo "FAIL: no backups"; exit 1; }
           # Freshness catches a cron that silently stopped: the Telegram alert only fires when the script runs
           ts=$(sed -E 's/^financebot-([0-9]{8})T([0-9]{2})([0-9]{2})([0-9]{2})Z.*/\1 \2:\3:\4/' <<<"$newest")
